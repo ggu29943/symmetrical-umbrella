@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>闪电 · 天空放电的科学</title>
+<!--FONTS--><link rel="stylesheet" href="fonts.css">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: #000; }
+  #cv { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  #txt { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; perspective: none; -webkit-font-smoothing: antialiased; }
+  #cover { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; background: radial-gradient(ellipse at center, rgba(10,16,32,0.55), rgba(0,0,0,0.92)); cursor: pointer; transition: opacity .6s; z-index: 5; color: #dfe9ff; font-family: 'NSans', 'Noto Sans SC', 'WenQuanYi Zen Hei', sans-serif; }
+  #cover.gone { opacity: 0; pointer-events: none; }
+  #cover .play { width: 132px; height: 132px; border-radius: 50%; border: 1.5px solid rgba(190,215,255,0.7); display: grid; place-items: center; box-shadow: 0 0 60px rgba(90,150,255,0.35), inset 0 0 30px rgba(90,150,255,0.2); }
+  #cover .play::after { content: ''; margin-left: 10px; border-left: 34px solid #e8f1ff; border-top: 21px solid transparent; border-bottom: 21px solid transparent; }
+  #cover .hint { font-size: 26px; letter-spacing: 0.2em; opacity: 0.85; }
+  #cover .keys { font-size: 18px; letter-spacing: 0.12em; opacity: 0.5; }
+  #prog { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: rgba(255,255,255,0.06); z-index: 4; opacity: 0; transition: opacity .4s; }
+  #stage:hover #prog { opacity: 1; }
+  #bar { height: 100%; width: 0; background: linear-gradient(90deg, #6fb6ff, #e8f4ff); }
+  body.render #prog { display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv" width="1920" height="1080"></canvas>
+  <div id="txt"></div>
+  <div id="prog"><div id="bar"></div></div>
+  <div id="cover"><div class="play"></div><div class="hint">点击播放（建议戴耳机 · 全屏）</div><div class="keys">空格 暂停 / 继续　·　← → 快退 / 快进 5 秒　·　F 全屏　·　R 换一组新闪电</div></div>
+</div>
+<audio id="music" preload="auto" src="music.m4a"></audio>
+<!--SCRIPTS-->
+<script src="js/util.js"></script>
+<script src="js/gfx.js"></script>
+<script src="js/text.js"></script>
+<script src="js/main.js"></script>
+<script src="js/style.js"></script>
+<script src="js/s1_formation.js"></script>
+<script src="js/s1b_process.js"></script>
+<script src="js/s2_types.js"></script>
+<script src="js/s3_upper.js"></script>
+<script src="js/s4_end.js"></script>
+<!--/SCRIPTS-->
+</body>
+</html>
