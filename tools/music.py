@@ -107,28 +107,40 @@ def arp(chords, t0, t1, step, amp=0.07, lo=62, hi=86, pattern=(0, 1, 2, 3, 2, 1)
 def brown(n):
     w = rng.standard_normal(n); b = np.cumsum(w); b = sg.sosfilt(sos_hp(22), b); return b / (np.abs(b).max() + 1e-9)
 
-def thunder(t0, s=1.0, crack=True, length=4.5, delay=0.12, sub=True, near=True):
+def thunder(t0, s=1.0, crack=True, length=5.0, delay=0.0, sub=True, near=True):
+    """近雷：中低频"撕裂声"（大量细碎冲击叠在一起）→ 厚重的"砰" → 起伏的滚雷长尾。
+    刻意压低 3 kHz 以上的成分，避免"脆"的噼啪感。"""
     n = int(length * SR); t = np.arange(n) / SR
     out = np.zeros((2, n))
     for ch in (0, 1):
-        b = brown(n)
-        rum = sg.sosfilt(sos_lp(260 if near else 160, 2), b)
+        # 滚雷：布朗噪声低通 + 多个随机起伏
+        rum = sg.sosfilt(sos_hp(35), sg.sosfilt(sos_lp(420 if near else 230, 2), brown(n)))
         e = np.zeros(n)
-        for _ in range(int(5 + 4 * s)):
-            tk = delay + rng.random() ** 1.6 * length * 0.45
-            e += rng.uniform(0.4, 1.0) * np.where(t > tk, np.exp(-(t - tk) / rng.uniform(0.25, 0.9)), 0) * smoothstep((t - tk) / 0.05)
-        e *= np.exp(-t / (length * 0.45))
-        out[ch] = rum * e / (e.max() + 1e-9) * 1.4
+        for _ in range(int(7 + 6 * s)):
+            tk = delay + 0.05 + rng.random() ** 1.4 * length * 0.55
+            e += rng.uniform(0.35, 1.0) * np.where(t > tk, np.exp(-(t - tk) / rng.uniform(0.35, 1.3)), 0) * smoothstep((t - tk) / 0.08)
+        e *= np.exp(-t / (length * 0.5))
+        r = rum * e; r /= np.abs(r).max() + 1e-9
+        out[ch] = r * 1.0
         if crack:
-            w = rng.standard_normal(n)
-            c = sg.sosfilt(sos_bp(900, 7000), w) * np.exp(-t / 0.045) * (t < 0.4)
-            c2 = sg.sosfilt(sos_bp(300, 3000), w) * np.where(t > 0.03, np.exp(-(t - 0.03) / 0.18), 0)
-            out[ch] += c * 0.9 + c2 * 0.35
+            # 撕裂声：几十个 2–8 ms 的细碎噪声冲击，按指数分布散布在前 0.3 s
+            rip = np.zeros(n)
+            for _ in range(int(30 + 30 * s)):
+                tt = delay + min(0.35, rng.exponential(0.07)); k = int(tt * SR); L = int(rng.uniform(0.002, 0.009) * SR)
+                if k + L < n: rip[k:k + L] += rng.standard_normal(L) * np.hanning(L) * np.exp(-tt / 0.12) * rng.uniform(0.4, 1.0)
+            rip = sg.sosfilt(sos_bp(160, 2400), rip); rip = sg.sosfilt(sos_lp(2800, 2), rip); rip /= np.abs(rip).max() + 1e-9
+            # 主体"砰"：80–500 Hz
+            body = sg.sosfilt(sos_bp(70, 500), rng.standard_normal(n)) * smoothstep((t - delay) / 0.005) * np.exp(-np.maximum(0, t - delay) / 0.3)
+            body /= np.abs(body).max() + 1e-9
+            out[ch] += rip * 0.5 + body * 0.62
     if sub:
-        f = 30 + 45 * np.exp(-t * 6)
-        boom = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.7) * smoothstep(t / 0.01)
-        out += boom * 0.55
-    place(fx, t0, out * s * 0.42)
+        f = 38 + 34 * np.exp(-t * 5)
+        boom = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-np.maximum(0, t - delay) / 0.9) * smoothstep((t - delay) / 0.01)
+        # 小音箱也能听到的"低频谐波层"（90–180 Hz）
+        thump = sg.sosfilt(sos_bp(90, 180), rng.standard_normal(n)) * np.exp(-np.maximum(0, t - delay) / 0.45) * smoothstep((t - delay) / 0.01)
+        thump /= np.abs(thump).max() + 1e-9
+        out += boom * 0.5 + thump * 0.45
+    place(fx, t0, out * s * 0.4)
 
 def soft_hit(t0, s=0.5):
     n = int(1.2 * SR); t = np.arange(n) / SR
@@ -288,10 +300,10 @@ for k, m in enumerate((74, 78, 81, 86)): bell(midi(m), final + 0.05 + k * 0.18, 
 # ═══════ 同步音效 ═══════
 for h in TL['hits']:
     t, s, k = h['t'], h['s'], h['kind']
-    if k == 'strike': thunder(t, s, crack=True, length=3.5 + 1.5 * s)
-    elif k == 'final': thunder(t, 1.0, crack=True, length=5.0)
+    if k == 'strike': thunder(t, s, crack=True, length=4.0 + 2.0 * s)
+    elif k == 'final': thunder(t, 1.0, crack=True, length=6.0)
     elif k == 'boom': thunder(t, s, crack=True, length=2.5, sub=True)
-    elif k == 'cut': thunder(t, s * 0.8, crack=True, length=0.6, sub=False)
+    elif k == 'cut': thunder(t, s * 0.8, crack=True, length=0.7, sub=False)
     elif k == 'rumble': thunder(t, s * 0.7, crack=False, length=4.5, delay=0.0, near=False)
     elif k == 'soft': soft_hit(t, s)
     elif k == 'tick': tick(t, s * 3)
@@ -309,15 +321,34 @@ def reverb_ir(sec, damp_hz, seed):
 ir1, ir2 = reverb_ir(3.4, 5000, 1), reverb_ir(1.8, 3500, 2)
 wet_m = np.stack([sg.oaconvolve(mus[c], ir1[c])[:N] for c in (0, 1)])
 wet_f = np.stack([sg.oaconvolve(fx[c], ir2[c])[:N] for c in (0, 1)])
-out = mus * 0.75 + wet_m * 0.55 + fx * 0.9 + wet_f * 0.35 + dry
-# 轻微的低切与总线压缩感（软削波）
+MG = 10 ** (3 / 20)   # 配乐相对音效提高 3 dB
+out = (mus * 0.75 + wet_m * 0.55) * MG + fx * 0.9 + wet_f * 0.42 + dry
 out = np.stack([sg.sosfilt(sos_hp(24), out[c]) for c in (0, 1)])
 out = out[:, :int(DUR * SR)]
 t = np.arange(out.shape[1]) / SR
 out *= smoothstep(t / 0.8) * (1 - smoothstep((t - (DUR - 2.2)) / 2.2))
-pk = np.abs(out).max(); out = out / pk * 1.15
-out = np.tanh(out * 1.1) / np.tanh(1.1) * 0.89
-rms = np.sqrt((out ** 2).mean()); print('peak', np.abs(out).max().round(3), 'rms dBFS', round(20 * np.log10(rms), 1))
+from scipy.ndimage import maximum_filter1d
+import pyloudnorm as pyln
+def compress(x, thr_db=-24, ratio=2.5, tau=0.08):
+    p = (x ** 2).mean(axis=0); a = np.exp(-1 / (tau * SR))
+    env = np.sqrt(sg.lfilter([1 - a], [1, -a], p) + 1e-12)
+    db = 20 * np.log10(env); over = np.maximum(0, db - thr_db)
+    g = 10 ** (-over * (1 - 1 / ratio) / 20)
+    return x * g
+def limit(x, ceil=10 ** (-1.5 / 20), look=0.005, rel=0.08):
+    L = int(look * SR); pk = maximum_filter1d(np.abs(x).max(axis=0), size=2 * L + 1)
+    g = np.minimum(1, ceil / (pk + 1e-12))
+    a = np.exp(-1 / (rel * SR)); g = -sg.lfilter([1 - a], [1, -a], -g)   # 释放平滑
+    g = np.minimum(g, ceil / (pk + 1e-12))
+    return x * g
+out /= np.abs(out).max()
+out = compress(out)
+meter = pyln.Meter(SR)
+for _ in range(3):   # 增益 → 限幅，迭代逼近 −13 LUFS
+    lufs = meter.integrated_loudness(out.T)
+    out = limit(out * 10 ** ((-13.0 - lufs) / 20))
+lufs = meter.integrated_loudness(out.T)
+print('integrated LUFS', round(lufs, 2), 'sample peak dBFS', round(20 * np.log10(np.abs(out).max()), 2))
 import wave
 pcm = (np.clip(out.T, -1, 1) * 32767).astype('<i2')
 with wave.open('build/music.wav', 'wb') as w:

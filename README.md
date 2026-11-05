@@ -23,8 +23,8 @@
 ```bash
 node tools/fonts.js          # 收集全片用到的字，下载对应的字体子集（Noto Sans/Serif SC、JetBrains Mono，SIL OFL 许可）
 node tools/timeline.js       # 导出时间表：场景起止、每一道闪电的时刻
-python3 tools/music.py       # 按时间表合成配乐 → build/music.wav
-ffmpeg -i build/music.wav -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:a aac -b:a 192k build/music.m4a
+python3 tools/music.py       # 按时间表合成配乐并完成母带处理（压缩 + 限幅，−13 LUFS）→ build/music.wav
+ffmpeg -i build/music.wav -c:a aac -b:a 256k build/music.m4a
 cp build/music.m4a src/
 node tools/render.js 4 7     # 4 个进程逐帧渲染 10,800 帧（种子 7）→ build/chunk_*.mp4
 # 拼接并压制成品（命令见 tools/encode.sh）
