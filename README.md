@@ -9,6 +9,7 @@
 |---|---|
 | `dist/lightning_1080p60.mp4` | 成品视频（H.264 + AAC，可直接存到 iPad / iPhone 的"照片"或"文件"中播放） |
 | `dist/cover.png` | 封面图（1920×1080，与正片同一套引擎绘制：程序化闪电、团块体积云、辉光、同款字体） |
+| `dist/cover_3x4.png` | 竖版封面（1080×1440，3:4，适合小红书等平台） |
 | `dist/lightning.html` | 单文件网页版：双击用浏览器打开即可播放或录屏，不需要联网。每次打开都会重新生成闪电形态 |
 
 ### 网页版操作
@@ -32,6 +33,7 @@ node tools/render.js 4 7     # 4 个进程逐帧渲染 10,800 帧（种子 7）�
 bash tools/encode.sh
 node tools/build.js          # 打包单文件网页版 → dist/lightning.html
 node tools/cover.js          # 渲染封面 → dist/cover.png（可加种子参数换一种闪电形态，默认 31）
+node tools/cover.js dist/cover_3x4.png 58 src/cover_v.html   # 渲染竖版 3:4 封面
 ```
 
 辅助工具：

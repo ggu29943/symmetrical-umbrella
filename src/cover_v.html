@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>闪电 · 竖版封面（3:4）</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  html, body { margin: 0; background: #000; }
+  #stage { position: relative; width: 1080px; height: 1440px; overflow: hidden; background: #000; }
+  #cv { position: absolute; left: 0; top: 0; }
+  .t { position: absolute; white-space: pre; -webkit-font-smoothing: antialiased; }
+  #tag { left: 88px; top: 104px; font: 400 30px 'NSans', sans-serif; letter-spacing: 0.42em; color: rgba(150, 205, 255, 0.88); }
+  #title { left: 64px; top: 132px; font: 900 300px/1 'NSerif', serif; letter-spacing: 0.12em; color: #eef4ff;
+           text-shadow: 0 0 24px rgba(120, 180, 255, 0.55), 0 0 76px rgba(90, 150, 255, 0.35), 0 0 150px rgba(70, 120, 255, 0.25); }
+  #hook { left: 80px; top: 466px; font: 700 58px/1.2 'NSerif', serif; letter-spacing: 0.06em; color: #eef4ff;
+          text-shadow: 0 0 14px rgba(120, 180, 255, 0.45), 0 0 40px rgba(90, 150, 255, 0.25); }
+  #line { left: 88px; top: 572px; width: 430px; height: 1.5px; background: linear-gradient(90deg, rgba(170, 210, 255, 0.95), rgba(170, 210, 255, 0)); }
+  #sub { left: 86px; top: 594px; font: 300 34px 'NSans', sans-serif; letter-spacing: 0.45em; color: #dbe7fb; }
+  #kw { left: 88px; top: 1356px; font: 400 25px 'NSans', sans-serif; letter-spacing: 0.14em; color: rgba(196, 211, 238, 0.72); }
+</style>
+<script>
+  // 竖版 3:4（小红书推荐封面尺寸 1080×1440）
+  window.STAGE = { w: 1080, h: 1440 };
+  window.COVER = {
+    seed: 58, HZ: 1180, sky: [950, 1265],
+    deck: { tw: 1000, th: 1100, x: -120, y: -40, w: 1320, h: 1300, puffs: 2600 },
+    ridgeFar: [1265, 26], ridgeNear: [1335, 50],
+    bolt: { x0: 800, y0: 330, gx: 560 }, bolt2: { x0: 170, y0: 960, gx: 200 },
+    lights: [{ x: 180, y: 960, r: 300, i: 0.26 }, { x: 300, y: 260, r: 380, i: 0.1 }, { x: 950, y: 140, r: 340, i: 0.12 }, { x: 250, y: 760, r: 380, i: 0.08 }],
+    airY: 900, airR: 760,
+    rain: { x0: 380, y0: 420, yEnd: 1270, sx: [300, 1100], sy: [380, 1280], n: 900, fade: 1180 },
+    dark: [330, 360, 760], lightK: 0.68, rTop: 1.15, darkFirst: true,
+  };
+</script>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv" width="1080" height="1440"></canvas>
+  <div class="t" id="tag">三分钟科普短片</div>
+  <div class="t" id="title">闪电</div>
+  <div class="t" id="hook">天上，为什么会放电？</div>
+  <div class="t" id="line"></div>
+  <div class="t" id="sub">天空放电的科学</div>
+  <div class="t" id="kw">起电 · 先导 · 回击 · 雷声 · 十余种闪电 · 安全常识</div>
+</div>
+<script src="js/util.js"></script>
+<script src="js/gfx.js"></script>
+<script src="js/cover.js"></script>
+</body>
+</html>
