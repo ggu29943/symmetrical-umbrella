@@ -1,7 +1,7 @@
 // ───────────────────────── 基础工具：数学、随机、噪声、缓动 ─────────────────────────
 'use strict';
 // 画布尺寸默认 1920×1080（正片）；封面等页面可在加载前设置 window.STAGE = { w, h } 改为其他比例
-const W = (typeof window !== 'undefined' && window.STAGE && window.STAGE.w) || 1920, H = (typeof window !== 'undefined' && window.STAGE && window.STAGE.h) || 1080, FPS = 60, DURATION = 183;
+const W = (typeof window !== 'undefined' && window.STAGE && window.STAGE.w) || 1920, H = (typeof window !== 'undefined' && window.STAGE && window.STAGE.h) || 1080, FPS = 60, DURATION = 186;
 
 const clamp = (x, a = 0, b = 1) => x < a ? a : x > b ? b : x;
 const lerp = (a, b, t) => a + (b - a) * t;

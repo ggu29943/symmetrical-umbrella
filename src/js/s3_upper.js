@@ -6,7 +6,7 @@
   const D = TL.tle;
   const yA = km => 1000 - km * 9.4;                     // 高度 → 画面 y
   const curve = x => (x - 960) * (x - 960) / 24000;      // 地球曲率
-  const SP1 = 4.75, SP2 = 6.15, BJ = 8.35, GJ = 11.2, EL = 14.05, GX = 1450;
+  const SP1 = 4.75, SP2 = 6.15, GH = 8.45, BJ = 11.35, GJ = 14.2, EL = 17.05, GX = 1450, GHX = 1250;
   scene({
     name: 'tle', t0: D.t0, dur: D.dur, fi: D.fi,
     setup(S, sc) {
@@ -33,14 +33,17 @@
       hit(o + GJ - 0.05, 0.4, 'strike'); hit(o + GJ + 0.1, 0.75, 'shimmer');
       hit(o + SP1 - 0.08, 0.5, 'strike'); hit(o + SP1, 0.6, 'shimmer'); hit(o + SP2, 0.4, 'shimmer'); hit(o + BJ, 0.6, 'shimmer'); hit(o + EL - 0.05, 0.5, 'strike'); hit(o + EL, 0.6, 'shimmer');
       // 文字
+      S.sp3 = mkSprite(GHX, 7, 1.25);
+      hit(o + GH - 0.08, 0.5, 'strike'); hit(o + GH, 0.6, 'shimmer'); hit(o + GH + 0.3, 0.35, 'shimmer');
       mk('head', { text: '云顶之上', at: o + 1.3, out: o + 4.15, x: 960, y: 380, ax: 0.5, ay: 0.5, size: 66, weight: 900, inA: 'focus', stagger: 0.12, order: 'center', outA: 'blur' });
       mk('sub', { text: '还有一个 1989 年才首次被拍到的世界', at: o + 1.9, out: o + 4.2, x: 960, y: 460, ax: 0.5, ay: 0.5, size: 34, color: C_TXT });
       const head1 = () => [900, yA(78)];
-      TERM(o + SP1 + 0.25, o + 8.0, 1130, 250, '红色精灵', ['出现在 50–90 公里高空', '只闪现几毫秒'], { term: { glow: [255, 70, 90], lead: { from: head1, ox: -14, delay: 0.1, color: 'rgba(255,170,180,0.7)' } } });
-      TERM(o + BJ + 0.2, o + 10.9, 660, 600, '蓝色喷流', ['从云顶向上射出', '可达约 40–50 公里'], { term: { glow: [90, 140, 255] } });
-      TERM(o + GJ + 0.35, o + 13.85, 880, 410, '巨型喷流', ['从云顶直冲约 70–90 公里高空', '把雷暴云与电离层"连通"', { text: '2001 年才首次被记录到', preset: 'note', size: 22 }], { term: { glow: [200, 110, 255] } });
-      TERM(o + EL + 0.2, o + 17.15, 1060, 300, 'ELVES', ['约 90 公里高空急速扩张的光环', '直径可达数百公里，持续不到 1 毫秒'], { term: { glow: [255, 120, 70], tracking: 0.2 } });
-      mk('note', { text: '示意动画：这些现象极其短暂，此处已放慢', at: o + 2.6, out: o + 17.2, x: 1850, y: 1040, ax: 1, ay: 1, size: 20 });
+      TERM(o + SP1 + 0.25, o + 8.0, 1130, 250, '红色精灵', ['出现在 50–90 公里高空', '尺度可达数十公里，只闪现几毫秒'], { term: { glow: [255, 70, 90], lead: { from: head1, ox: -14, delay: 0.1, color: 'rgba(255,170,180,0.7)' } } });
+      TERM(o + GH + 0.35, o + GH + 2.6, 230, 250, '绿色幽灵 GHOST', ['出现在部分红色精灵顶端的绿色辉光', '2019 年才首次被拍到', { text: '发光来源：除了氧，光谱里还有铁、镍 · 仍在研究', preset: 'note', size: 22, hl: [['仍在研究', C_AMB]] }], { term: { glow: [90, 255, 150], color: '#d6ffe4', hl: [['GHOST', '#9dffc0']] } });
+      TERM(o + BJ + 0.2, o + BJ + 2.55, 660, 600, '蓝色喷流', ['从云顶向上射出', '可达约 40–50 公里'], { term: { glow: [90, 140, 255] } });
+      TERM(o + GJ + 0.35, o + GJ + 2.65, 880, 410, '巨型喷流', ['从云顶直冲约 70–90 公里高空', '把雷暴云与电离层"连通"', { text: '2001 年才首次被记录到', preset: 'note', size: 22 }], { term: { glow: [200, 110, 255] } });
+      TERM(o + EL + 0.2, o + EL + 3.1, 1060, 300, 'ELVES', ['约 90 公里高空急速扩张的光环', '直径可达数百公里，持续不到 1 毫秒'], { term: { glow: [255, 120, 70], tracking: 0.2 } });
+      mk('note', { text: '示意动画：这些现象极其短暂，此处已放慢', at: o + 2.6, out: o + EL + 3.15, x: 1850, y: 1040, ax: 1, ay: 1, size: 20 });
     },
     draw(ctx, lt, t, S) {
       const cy = lerp(-600, 0, smoother(lt / 2.6));
@@ -50,7 +53,7 @@
       // 气辉
       ctx.save(); ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(80,220,140,0.07)'; ctx.beginPath(); for (let x = -40; x <= W + 40; x += 40) { const y = yA(95) + curve(x); x < 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); ctx.restore();
       // 高度标尺
-      const ra = smooth((lt - 1.8) / 0.8) * (1 - smooth((lt - 17.2) / 0.5));
+      const ra = smooth((lt - 1.8) / 0.8) * (1 - smooth((lt - EL - 3.15) / 0.5));
       if (ra > 0) {
         ctx.save(); ctx.globalAlpha = ra; ctx.strokeStyle = 'rgba(170,200,245,0.4)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(84, yA(0) - 40); ctx.lineTo(84, yA(100)); ctx.stroke();
@@ -58,7 +61,7 @@
         ctx.restore();
       }
       // 云顶光源（雷暴内部的闪电从下方照亮云顶）
-      const fl = [[SP1 - 0.08, 900, 1.0], [SP2 - 0.06, 470, 0.7], [BJ - 0.05, 560, 0.4], [GJ - 0.05, GX, 0.8], [EL - 0.05, 1300, 1.1], [2.1, 1500, 0.4], [3.3, 300, 0.35], [9.8, 1650, 0.4], [12.9, 760, 0.35]];
+      const fl = [[SP1 - 0.08, 900, 1.0], [SP2 - 0.06, 470, 0.7], [GH - 0.08, GHX, 1.0], [BJ - 0.05, 560, 0.4], [GJ - 0.05, GX, 0.8], [EL - 0.05, 1300, 1.1], [2.1, 1500, 0.4], [3.3, 300, 0.35], [9.8, 1650, 0.4], [12.9, 760, 0.35]];
       const lights = fl.map(([tt, x, k]) => ({ x, y: 900, r: 330, i: (pulse(lt, tt, 0.06) + pulse(lt, tt + 0.05, 0.05) * 0.6) * k * 0.8 }));
       // 地球与云顶
       ctx.fillStyle = '#04060c'; ctx.beginPath(); ctx.moveTo(-60, 2000); for (let x = -60; x <= W + 60; x += 30) ctx.lineTo(x, 892 + curve(x)); ctx.lineTo(W + 60, 2000); ctx.fill();
@@ -82,7 +85,24 @@
           drawBolt(ctx, c.up, { lf: grow * c.up.maxD, I: a * 0.6, rf: -1, bI: 0.8 }, { width: 1.2, core: [255, 160, 170], glow: [255, 40, 70], glowK: 1.0 });
         }
       };
-      sprite(S.sp1, SP1, 1.0); sprite(S.sp2, SP2, 0.75);
+      sprite(S.sp1, SP1, 1.0); sprite(S.sp2, SP2, 0.75); sprite(S.sp3, GH, 1.1);
+      // —— 绿色幽灵（GHOST）：精灵顶端稍后出现、停留更久的绿色辉光 ——
+      const hd = lt - GH - 0.12;
+      if (hd > 0) {
+        const a = smooth(hd / 0.18) * Math.exp(-Math.max(0, hd - 0.5) / 0.8);
+        if (a > 0.01) {
+          ctx.save(); ctx.globalCompositeOperation = 'lighter';
+          const caps = S.sp3.map(c => ({ x: c.x, y: c.top - 8 + Math.sin(lt * 2 + c.x) * 3, r: c.w * 2.4 }));
+          caps.push({ x: GHX, y: yA(86), r: 230, flat: 0.22, k: 0.6 });
+          for (const c of caps) {
+            ctx.save(); ctx.translate(c.x, c.y - hd * 6); ctx.scale(1, c.flat || 0.42);
+            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, c.r); g.addColorStop(0, rgba([110, 255, 160], 0.42 * a * (c.k || 1))); g.addColorStop(0.5, rgba([70, 230, 130], 0.16 * a * (c.k || 1))); g.addColorStop(1, 'rgba(60,220,120,0)');
+            ctx.fillStyle = g; ctx.fillRect(-c.r, -c.r, c.r * 2, c.r * 2); ctx.restore();
+          }
+          ctx.restore();
+          const g2 = GL.ctx; g2.fillStyle = rgba([80, 255, 140], 0.35 * a); g2.beginPath(); g2.ellipse(GHX, yA(86), 230, 55, 0, 0, 7); g2.fill();
+        }
+      }
       // —— 蓝色喷流 ——
       const jd = lt - BJ;
       if (jd > 0) {
