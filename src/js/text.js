@@ -61,6 +61,8 @@ const TX = {
       else if (it.order === 'random') { const R = RNG(n * 7919 + Math.floor(it.at * 100)); it.spans.forEach(s => s.k = R() * n * 0.6); }
       else if (it.order === 'rl') it.spans.forEach((s, i) => s.k = n - 1 - i);
       else it.spans.forEach((s, i) => s.k = i);
+      if (it.kmap) it.spans.forEach((s, i) => s.k = it.kmap(i, s.k));   // 自定义逐字节奏（如英文名作为一组快速跟进）
+      if (it.kmapOut) it.spans.forEach((s, i) => s.ko = it.kmapOut(i, s.k, n));   // 退场可用另一套节奏
       it.kMax = Math.max(0, ...it.spans.map(s => s.k));
       // 关键词着色：hl: [['正电', '#ffc46e'], ...]
       if (it.hl) { const flat = it.spans.map(s => s.ch).join(''); for (const [w, c] of it.hl) { let k = flat.indexOf(w); while (k >= 0) { for (let j = k; j < k + Array.from(w).length; j++) it.spans[j].hlc = c; k = flat.indexOf(w, k + 1); } } }
@@ -106,7 +108,7 @@ const TX = {
     for (let i = 0; i < n; i++) {
       const s = it.spans[i];
       const pin = clamp((lt - s.k * it.stagger) / it.inDur);
-      const pout = clamp((t - it.out - s.k * it.outStagger) / it.outDur);
+      const pout = clamp((t - it.out - (s.ko ?? s.k) * it.outStagger) / it.outDur);
       const st = this.charStyle(it, s, i, pin, pout, t);
       const css = `opacity:${(st.o * it.opacity).toFixed(3)};transform:translate3d(${st.x.toFixed(2)}px,${st.y.toFixed(2)}px,${(st.z || 0).toFixed(1)}px) scale(${st.s.toFixed(4)}) rotate(${(st.r || 0).toFixed(2)}deg);filter:${st.b > 0.05 ? `blur(${st.b.toFixed(2)}px)` : 'none'};text-shadow:${this.shadow(it, st.g * fk)};display:inline-block;white-space:pre${(st.c || s.hlc) ? ';color:' + (st.c || s.hlc) : ''}`;
       if (s.css !== css) { s.el.style.cssText = css + (it.charCss ? ';' + it.charCss(s.ch, i) : ''); s.css = css; }

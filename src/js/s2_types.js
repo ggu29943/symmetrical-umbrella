@@ -15,7 +15,7 @@ function subscene(ctx, a, fn) {
 // 术语 + 说明的组合排版
 function TERM(at, out, x, y, name, subs = [], o = {}) {
   const size = o.size || 60;
-  mk('term', Object.assign({ text: name, at, out, x, y, ay: 0.5, size }, o.term || {}));
+  mk('term', biName(Object.assign({ text: name, at, out, x, y, ay: 0.5, size }, o.term || {})));
   subs.forEach((s, i) => {
     const so = typeof s === 'string' ? { text: s } : s;
     mk(so.preset || 'sub', Object.assign({ at: at + 0.45 + i * 0.5, out: out + 0.04 * (i + 1), x: x + 2, y: y + size * 0.62 + 30 + i * (o.gap || 48), ay: 0.5, size: 31, color: C_SUB }, so));
@@ -69,8 +69,8 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       S.minus = []; S.plus = [];
       for (let k = 0; k < 22; k++) S.minus.push([R.range(380, 760), R.range(430, 560), R() * 9]);
       for (let k = 0; k < 26; k++) S.plus.push([R.range(300, 1750), R.range(95, 165), R() * 9]);
-      TERM(o + 1.5, o + 5.2, 110, 760, '负极性云地闪', ['约占九成 · 把负电荷送到地面', '常有多次回击'], { term: { hl: [['负极性', C_CYAN]] } });
-      TERM(o + 7.0, o + 11.85, 560, 360, '正极性云地闪', ['约占一成 · 多从高处的云砧发出', '可落在远离雷暴核心的地方', '通常只击一次，却更强、更持久', { text: '更容易引发火灾', color: '#ffb27a' }], { term: { hl: [['正极性', C_GOLD]] }, gap: 46 });
+      TERM(o + 1.5, o + 5.2, 110, 760, '负极性云地闪 NEGATIVE CG', ['约占九成 · 把负电荷送到地面', '常有多次回击'], { term: { hl: [['负极性', C_CYAN]] } });
+      TERM(o + 7.0, o + 11.85, 560, 360, '正极性云地闪 POSITIVE CG', ['约占一成 · 多从高处的云砧发出', '可落在远离雷暴核心的地方', '通常只击一次，却更强、更持久', { text: '更容易引发火灾', color: '#ffb27a' }], { term: { hl: [['正极性', C_GOLD]] }, gap: 46 });
     },
     draw(ctx, lt, t, S) {
       const px = lerp(80, -360, smoother((lt - 3.9) / 2.8));
@@ -136,10 +136,10 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       S.fca = flashOf(S.ca, { t0: 5.25, lead: 0.28, stepped: false, strokes: [0], peaks: [1.7], tau: 0.035, after: 0.06, afterK: 0.05, bI: 0.8 });
       hit(o + S.fic.tc, 0.5, 'soft'); hit(o + S.fcc.tc, 0.7, 'strike'); hit(o + S.fca.tc, 0.75, 'cut');
       mk('head', { text: '约四分之三的闪电，从不着地', at: o + 0.5, out: o + 8.9, x: 960, y: 110, ax: 0.5, ay: 0.5, size: 52 });
-      const lab = (at, x, name, sub) => { mk('term', { text: name, at: o + at, out: o + 8.75, x, y: 860, ax: 0.5, ay: 0.5, size: 48 }); mk('sub', { text: sub, at: o + at + 0.45, out: o + 8.8, x, y: 925, ax: 0.5, ay: 0.5, size: 28 }); };
-      lab(1.2, 365, '云内闪', '在同一朵云内部放电');
-      lab(3.4, 1055, '云际闪', '在两朵云之间跳跃');
-      lab(5.55, 1690, '云空闪', '窜入晴空，戛然而止');
+      const lab = (at, x, name, sub) => { mk('term', biName({ text: name, at: o + at, out: o + 8.75, x, y: 860, ax: 0.5, ay: 0.5, size: 48 })); mk('sub', { text: sub, at: o + at + 0.45, out: o + 8.8, x, y: 925, ax: 0.5, ay: 0.5, size: 28 }); };
+      lab(1.2, 365, '云内闪 INTRA-CLOUD', '在同一朵云内部放电');
+      lab(3.4, 1055, '云际闪 CLOUD-TO-CLOUD', '在两朵云之间跳跃');
+      lab(5.55, 1690, '云空闪 CLOUD-TO-AIR', '窜入晴空，戛然而止');
     },
     draw(ctx, lt, t, S) {
       camera(ctx, -lt * 6, 0, 1.0 + lt * 0.003);
@@ -183,9 +183,9 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       // 叉状闪电的标注引线：取一条一级分支的末端
       const br = S.fork.segs.filter(s => s.lvl === 1 && s.db < S.fork.Dmain && s.bx < 1000 && s.by > 280 && s.by < 620).sort((a, b) => a.bx - b.bx);
       const tip = br.length ? [br[0].bx, br[0].by] : [880, 460];
-      TERM(o + 0.7, o + 3.85, 110, 790, '片状闪电', ['看不见通道，只见整片云被照亮', { text: '——其实是被云遮住的云内闪', color: C_TXT }], { gap: 46 });
-      TERM(o + A1 + 1.0, o + B1 - 0.55, 110, 360, '叉状闪电', [{ text: '枝杈，是先导留下的“岔路”', lead: { from: () => tip, ox: 420, delay: 0.2, elbow: 'h' } }, '回击时被一同点亮']);
-      TERM(o + B1 + 0.9, o + 11.2, 110, 360, '链状闪电', ['消退时，断成一串发光的“珠子”'], { term: { outA: 'beads' } });
+      TERM(o + 0.7, o + 3.85, 110, 790, '片状闪电 SHEET LIGHTNING', ['看不见通道，只见整片云被照亮', { text: '——其实是被云遮住的云内闪', color: C_TXT }], { gap: 46 });
+      TERM(o + A1 + 1.0, o + B1 - 0.55, 110, 360, '叉状闪电 FORKED LIGHTNING', [{ text: '枝杈，是先导留下的“岔路”', lead: { from: () => tip, ox: 420, delay: 0.2, elbow: 'h' } }, '回击时被一同点亮']);
+      TERM(o + B1 + 0.9, o + 11.2, 110, 360, '链状闪电 BEAD LIGHTNING', ['消退时，断成一串发光的“珠子”'], { term: { outA: 'beads' } });
       UNK(o + B1 + 2.0, o + 11.25, 112, 520, '成因尚无定论');
     },
     draw(ctx, lt, t, S) {
@@ -259,9 +259,9 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       hit(o + S.fd.tc, 0.9, 'strike');
       S.trees = [[420, 70], [560, 50], [1480, 60], [1690, 80]].map(([x, h], i) => makeTree(SEED + 110 + i, x, ridgeY(S.hills, x) + 4, h));
       // 文字
-      TERM(o + 0.95, o + 4.45, 110, 300, '热闪电', [{ text: '并不是“热”出来的', color: C_TXT }, '只是太远——雷声传不到你耳边']);
+      TERM(o + 0.95, o + 4.45, 110, 300, '热闪电 HEAT LIGHTNING', [{ text: '并不是“热”出来的', color: C_TXT }, '只是太远——雷声传不到你耳边']);
       mk('note', { text: '通常超过约 15–20 公里', at: o + 1.6, out: o + 4.5, x: 860, y: 760, ax: 0.5, ay: 0.5, size: 22, color: 'rgba(200,215,240,0.8)', persp: { p: 1200, rz: -4 } });
-      TERM(o + SP + 0.5, o + 9.25, 110, 250, '干闪电', [{ text: '雨在半空就蒸发了，闪电却落了地', color: C_TXT }, { text: '容易引燃野火', hl: [['野火', '#ffa060']] }]);
+      TERM(o + SP + 0.5, o + 9.25, 110, 250, '干闪电 DRY LIGHTNING', [{ text: '雨在半空就蒸发了，闪电却落了地', color: C_TXT }, { text: '容易引燃野火', hl: [['野火', '#ffa060']] }]);
       mk('label', { text: '雨幡', at: o + SP + 1.4, out: o + 9.25, x: 760, y: 520, ax: 1, ay: 0.5, size: 28, lead: { from: () => [930, 470], ox: 12, delay: 0.1 } });
     },
     draw(ctx, lt, t, S) {
@@ -351,7 +351,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
         return { B, f: flashOf(B, { t0: tt, lead: 0.12, stepped: false, strokes: [0, 0.07], peaks: [1.5, 1.0], tau: 0.05 }) };
       });
       for (let k = 0; k < 7; k += 0.5) hit(o + k + 0.13, 0.12, 'crackle');
-      TERM(o + 0.8, o + 6.55, 110, 270, '火山闪电', [{ text: '火山灰在喷发柱中碰撞、碎裂而带电', color: C_TXT }, '高处结成的冰粒也会参与起电'], { term: { glow: [255, 150, 90] } });
+      TERM(o + 0.8, o + 6.55, 110, 270, '火山闪电 VOLCANIC LIGHTNING', [{ text: '火山灰在喷发柱中碰撞、碎裂而带电', color: C_TXT }, '高处结成的冰粒也会参与起电'], { term: { glow: [255, 150, 90] } });
     },
     draw(ctx, lt, t, S) {
       camera(ctx, 0, 0, 1.0 + lt * 0.006);

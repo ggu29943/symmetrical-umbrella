@@ -118,13 +118,14 @@ const BUCK = 10;
 function drawBolt(ctx, B, st, sty = {}) {
   const up = !!st.up, lf = st.lf === undefined ? Infinity : st.lf, lead = st.lead || 0, I = st.I || 0, rf = st.rf === undefined ? (up ? Infinity : -1) : st.rf;
   const bI = st.bI === undefined ? 0.55 : st.bI, tip = st.tip || 0, tipLen = st.tipLen || 40, onlyMain = st.onlyMain;
-  const width = sty.width || 2.4, core = sty.core || COL.core, glow = sty.glow || COL.blue, leadCol = sty.leadCol || [170, 150, 255];
+  const width = sty.width || 2.4, core0 = sty.core || COL.core, glow0 = sty.glow || COL.blue, leadCol = sty.leadCol || [170, 150, 255];
   const gk = sty.glowK === undefined ? 1 : sty.glowK;
   if (lead <= 0 && I <= 0.002 && tip <= 0) return;
   // 分桶（为了批量绘制）：
   //  · 回击段：只按"静态"的结构亮度系数分桶（主干 / 分支层级 / 粗细），整体亮度 I 连续相乘 —— 淡出时平滑、不跳档
   //  · 先导段：按当前亮度分桶（先导本身就在逐步变化）
-  const FB = 16, buckets = new Map();
+  // sty.bands / bandOf(y) / bandCol(band)→[core, glow]：按高度给每段通道连续变色（如巨型喷流：底部蓝 → 顶部红）
+  const FB = 16, buckets = new Map(), CB = sty.bands || 0;
   for (const s of B.segs) {
     if (s.da >= lf) continue;
     if (onlyMain && !s.main) continue;
@@ -139,13 +140,16 @@ function drawBolt(ctx, B, st, sty = {}) {
       if (I * (s.main ? 1 : bI) * fs > b) { const qs = s.main ? FB : Math.min(FB - 1, Math.floor(fs * FB)); key = 'S' + wc + '_' + qs; }
     }
     if (!key) { if (b < 0.01) continue; key = 'L' + wc + '_' + Math.min(BUCK - 1, Math.floor(Math.min(b, 2) / 2 * BUCK)); }
+    if (CB) key = Math.min(CB - 1, Math.max(0, Math.floor(sty.bandOf((s.ay + s.by) / 2)))) + '|' + key;
     let arr = buckets.get(key); if (!arr) buckets.set(key, arr = []);
     arr.push(s.ax, s.ay, bx, by);
   }
   const gctx = GL.ctx;
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   gctx.lineCap = 'round';
-  for (const [key, arr] of buckets) {
+  for (const [key0, arr] of buckets) {
+    let key = key0, core = core0, glow = glow0;
+    if (CB) { const p = key0.indexOf('|'); [core, glow] = sty.bandCol(+key0.slice(0, p)); key = key0.slice(p + 1); }
     const str = key[0] === 'S', wc = +key[1], q = +key.slice(3);
     const b = str ? (wc === 0 ? I : I * bI) * (q >= FB ? 1 : (q + 0.5) / FB) : (q + 0.5) / BUCK * 2;
     if (b < 0.004) continue;

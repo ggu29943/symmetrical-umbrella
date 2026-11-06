@@ -26,6 +26,19 @@ const ST = {
   num: { kind: 'count', size: 64, weight: 300, family: 'mono', inA: 'rise', inDur: 0.6, outDur: 0.5, tracking: 0 },
 };
 const mk = (preset, o) => T(Object.assign({}, ST[preset], o));
+// 闪电类型名统一为"中文 + 英文"（如「绿色幽灵 GHOST」）：英文部分小一号、细一些、字距放宽，颜色取该类型辉光色的浅色
+function biName(o) {
+  const chars = Array.from(o.text), k = chars.findIndex((c, i) => c === ' ' && /[A-Za-z]/.test(chars[i + 1] || ''));
+  if (k < 0) return o;
+  const en = chars.slice(k + 1).join(''), g = o.glow || ST.term.glow;
+  const col = o.enColor || `rgb(${mixc(g, [255, 255, 255], 0.5).map(v => v | 0).join(',')})`;
+  return Object.assign({}, o, {
+    hl: [...(o.hl || []), [en, col]],
+    kmap: (i, k0) => i <= k ? k0 : k + (i - k) * 0.3,               // 入场：英文紧跟中文、作为一组快速跟进
+    kmapOut: (i, k0, n) => i < k ? k0 : k - 1 + (i - k) / (n - k),   // 退场：英文与中文几乎同时离开，不会单独拖在后面
+    charCss: (ch, i) => i < k ? '' : i === k ? 'font-size:0.5em;margin-left:0.55em' : `font-size:0.5em;font-family:${FONT.sans};font-weight:500;letter-spacing:0.14em`,
+  });
+}
 // "尚无定论"标记：琥珀色细框 + 文字
 function UNK(at, out, x, y, text = '尚无定论', o = {}) {
   const size = o.size || 30;
