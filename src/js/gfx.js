@@ -226,7 +226,7 @@ function makeCloud(seed, w, h, shape, o = {}) {
   let placed = 0, tries = 0;
   while (placed < O.puffs && tries++ < O.puffs * 40) {
     const u = R(), v = R(), sv = shape(u, v);
-    if (sv <= O.th0 * 0.7 || R() > sv) continue;
+    if (sv <= O.th0 * 0.7 || R() > (O.place ? O.place(sv, u, v) : sv)) continue;
     placed++;
     const r = S * lerp(O.rMin, O.rMax, Math.pow(R(), 2.6)) * (0.6 + 0.6 * clamp(sv)) * (o.rScale ? o.rScale(u, v) : 1);
     const fy = O.flat ? O.flat(u, v) : 1;

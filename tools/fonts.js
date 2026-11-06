@@ -13,7 +13,7 @@ const get = (url, bin) => new Promise((res, rej) => https.get(url, { headers: { 
   const tl = await p.evaluate(() => window.timeline());
   const cover = await p.evaluate(() => document.title);
   await b.close();
-  const html = fs.readFileSync('src/index.html', 'utf8').replace(/<[^>]+>/g, '');
+  const html = ['src/index.html', 'src/cover.html'].map(f => fs.readFileSync(f, 'utf8')).join('').replace(/<[^>]+>/g, '');
   const extra = '0123456789 公里℃−毫秒第次秒伏约道闪电—，。、：；？！“”（）·→÷≈×+-.,/%=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const all = Array.from(new Set(Array.from(tl.text + cover + html + extra).filter(c => c.trim() || c === ' '))).sort().join('');
   console.log('unique chars:', all.length);
