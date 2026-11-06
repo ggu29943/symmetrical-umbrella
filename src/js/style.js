@@ -28,7 +28,7 @@ const ST = {
 const mk = (preset, o) => T(Object.assign({}, ST[preset], o));
 // 闪电类型名统一为"中文 + 英文"（如「绿色幽灵 GHOST」）：英文部分小一号、细一些、字距放宽，颜色取该类型辉光色的浅色
 function biName(o) {
-  const chars = Array.from(o.text), k = chars.findIndex((c, i) => c === ' ' && /[A-Za-z]/.test(chars[i + 1] || ''));
+  const chars = Array.from(o.text).filter(c => c !== '\n'), k = chars.findIndex((c, i) => c === ' ' && /[A-Za-z]/.test(chars[i + 1] || ''));
   if (k < 0) return o;
   const en = chars.slice(k + 1).join(''), g = o.glow || ST.term.glow;
   const col = o.enColor || `rgb(${mixc(g, [255, 255, 255], 0.5).map(v => v | 0).join(',')})`;

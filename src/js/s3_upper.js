@@ -6,58 +6,78 @@
   const D = TL.tle;
   const yA = km => 1000 - km * 9.4;                     // 高度 → 画面 y
   const curve = x => (x - 960) * (x - 960) / 24000;      // 地球曲率
-  const SP1 = 4.75, SP2 = 6.15, GH = 8.45, BJ = 11.35, GJ = 14.2, EL = 17.05, GX = 1450, GHX = 1250;
+  const SP1 = 4.75, SP2 = 6.15, GH = 8.45, BJ = 11.35, GJ = 14.65, EL = 17.3, TEND = 20.2, GX = 1450, GHX = 1250;
   // 巨型喷流的"树"：返回与 genBolt 同结构的 B，可直接交给 drawBolt。
-  // 每段的路程 da/db = 离云顶的高度（+ 每根分支少量延迟），于是生长前沿自下而上推进；分叉越高越多、张角越大
-  function genJet(seed, x0, y0, yA) {
-    const R = RNG(seed), segs = [], U = -Math.PI / 2, kmOf = y => (1000 - y) / 9.4;
-    const halfW = km => 16 + 250 * Math.pow(clamp((km - 16) / 72), 1.6);      // 树冠外形（半宽，像素）
+  // 形态依据观测（Su 等 2003；Boggs 等 2022）：云顶到约 35–40 公里是少数几根明亮的蓝色通道；
+  // 在约 35–60 公里的过渡区迅速扇形展开（分叉最频繁、张角越来越大）；再往上是偏红的细丝，止于约 70–90 公里的电离层下缘。
+  // 所有分支同步生长；一根分支若要撞上别的分支就在那里停下（放电通道互相排斥、不会交叉成网）。
+  // 每段的路程 da/db ≈ 离云顶的高度 × 各分支的速度系数 + 延迟，于是生长前沿自下而上、参差地推进。
+  function genJet(seed, x0, y0) {
+    const R = RNG(seed), U = -Math.PI / 2, kmOf = y => (1000 - y) / 9.4;
+    const sideK = [R.range(0.86, 0.96), R.range(1.02, 1.12)], nzs = R.int(1, 999);
+    const halfW = (km, side = 1) => (16 + 240 * Math.pow(clamp((km - 16) / 70), 1.25)) * sideK[side > 0 ? 1 : 0] * (0.92 + 0.16 * noise1(km * 0.12 + (side > 0 ? 40 : 0), nzs));
     const KM = [12, 35, 50, 62, 74, 90];
-    const GLW = [[70, 125, 255], [95, 110, 255], [150, 80, 235], [200, 60, 185], [228, 48, 120], [235, 45, 95]];
-    const CORE = [[225, 238, 255], [215, 220, 255], [232, 202, 250], [250, 186, 230], [255, 176, 202], [255, 170, 190]];
+    const GLW = [[70, 125, 255], [95, 110, 255], [150, 80, 235], [215, 55, 150], [240, 45, 80], [245, 40, 60]];
+    const CORE = [[225, 238, 255], [215, 220, 255], [232, 202, 250], [255, 185, 215], [255, 175, 185], [255, 170, 170]];
     const pick = (T, km) => { if (km <= KM[0]) return T[0]; for (let i = 1; i < KM.length; i++) if (km <= KM[i]) return mixc(T[i - 1], T[i], (km - KM[i - 1]) / (KM[i] - KM[i - 1])); return T[T.length - 1]; };
     const NB = 16, bandKm = b => 12 + (b + 0.5) / NB * 78;
-    let count = 0;
-    const stack = [{ x: x0, y: y0, ang: U, base: U, lvl: 0, dd: 0, top: R.range(34, 39), km0: kmOf(y0) }];
-    while (stack.length) {
-      const st = stack.pop(); count++; st.lim = R.range(0.55, 0.95);
-      let { x, y, ang } = st; const segStart = segs.length;
-      for (let n = 0; n < 400; n++) {
-        const km = kmOf(y); if (km >= st.top) break;
-        const hn = clamp((km - 25) / 55);
+    // 占位网格：记录每个格子属于哪根分支，用来避免交叉
+    const CS = 7, grid = new Map(), cell = (x, y) => (Math.floor(x / CS) + 1000) * 4096 + Math.floor(y / CS) + 1000;
+    // 被别的分支占了：自己、父分支、自己的子分支不算（它们本来就从同一点长出）；刚长出来的前几步也不算
+    const blocked = (x, y, st) => { const o = grid.get(cell(x, y)); if (o === undefined || o === st.id || o === st.pid) return false; const os = all[o]; return os.pid !== st.id && os.n > 5; };
+    const all = []; let nid = 0;
+    const spawn = o => { const s = Object.assign({ id: nid++, n: 0, segs: [], spd: 1, off: 0, alive: true }, o); all.push(s); return s; };
+    spawn({ x: x0, y: y0, ang: U, base: U, lvl: 0, pid: -1, top: R.range(34, 39) });
+    const daAt = (s, y) => (y0 - y) * s.spd + s.off;
+    for (let it = 0; it < 500; it++) {
+      const act = all.filter(s => s.alive); if (!act.length) break;
+      for (const st of act) {
+        const km = kmOf(st.y);
+        if (km >= st.top) { st.alive = false; if (st.lvl === 0) split(st); continue; }
+        const hk = clamp((km - 35) / 30);
         const L = 7.5 * R.range(0.6, 1.4);
-        ang += R.gauss() * (st.lvl ? 0.09 + 0.12 * hn : 0.06);
+        let ang = st.ang + R.gauss() * (st.lvl ? 0.08 + 0.08 * hk : 0.06);
         ang += angDiff(st.base, ang) * 0.18;
-        const ex = (x - x0) / halfW(km);
-        if (Math.abs(ex) > st.lim) ang += angDiff(U - Math.sign(ex) * 0.05, ang) * 0.4 * clamp((Math.abs(ex) - st.lim) / 0.3);
-        ang += angDiff(U, ang) * 0.06 * smooth((km - 68) / 14);                // 顶端的细丝逐渐转为竖直（像精灵的触须）
-        ang = U + clamp(angDiff(ang, U), -1.25, 1.25);
-        const nx = x + Math.cos(ang) * L, ny = y + Math.sin(ang) * L;
+        const side = st.x >= x0 ? 1 : -1, ex = Math.abs(st.x - x0) / halfW(km, side);
+        if (ex > st.lim) ang += angDiff(U + side * 0.08, ang) * 0.35 * clamp((ex - st.lim) / 0.3);
+        ang = U + clamp(angDiff(ang, U), -1.2, 1.2);
+        let nx = st.x + Math.cos(ang) * L, ny = st.y + Math.sin(ang) * L;
+        if (st.n > 5 && blocked(nx, ny, st)) {   // 前方被别的分支占了：先试着向外侧偏开，偏不开就停在这里
+          const a2 = ang + (st.x >= x0 ? 1 : -1) * 0.45, x2 = st.x + Math.cos(a2) * L, y2 = st.y + Math.sin(a2) * L;
+          if (blocked(x2, y2, st) || Math.sin(a2) > -0.25) { st.alive = false; continue; }
+          ang = a2; nx = x2; ny = y2;
+        }
         // 中点位移，让通道有锯齿感
-        const mx = (x + nx) / 2, my = (y + ny) / 2, g = R.gauss() * 0.11 * L;
-        const pts = [[x, y], [mx - Math.sin(ang) * g, my + Math.cos(ang) * g], [nx, ny]];
-        for (let i = 0; i < 2; i++) segs.push({ ax: pts[i][0], ay: pts[i][1], bx: pts[i + 1][0], by: pts[i + 1][1], da: y0 - pts[i][1] + st.dd, db: y0 - pts[i + 1][1] + st.dd, lvl: Math.min(st.lvl, 3), main: st.lvl === 0, j: 0, w: 1 });
-        x = nx; y = ny;
-        // 主干下段偶尔有短小的侧枝
-        if (st.lvl === 0 && R() < 0.035) { const sd = R.sign(), ba = ang + sd * R.range(0.3, 0.6); stack.push({ x, y, ang: ba, base: ba, lvl: 2, dd: st.dd + R.range(4, 16), top: kmOf(y) + R.range(2.5, 6), km0: kmOf(y) }); }
-        // 上段分叉：越高越频繁、张角越大
-        if (st.lvl >= 1 && count < 95 && R() < (0.012 + 0.12 * hn) * (st.lvl >= 3 ? 0.65 : 1)) {
-          const sd = R.sign(), th = (0.14 + 0.7 * hn) * R.range(0.75, 1.2);
-          const cb = U + clamp(angDiff(st.base + sd * th * 0.85, U), -1.0, 1.0);
-          stack.push({ x, y, ang: ang + sd * th, base: cb, lvl: st.lvl + 1, dd: st.dd + R.range(2, 22), top: R() < 0.22 ? Math.min(88, kmOf(y) + R.range(4, 12)) : R.range(76, 89), km0: kmOf(y) });
-          ang -= sd * th * 0.25; st.base = U + clamp(angDiff(st.base - sd * th * 0.15, U), -1.0, 1.0);
+        const mx = (st.x + nx) / 2, my = (st.y + ny) / 2, g = R.gauss() * 0.11 * L;
+        const pts = [[st.x, st.y], [mx - Math.sin(ang) * g, my + Math.cos(ang) * g], [nx, ny]];
+        for (let i = 0; i < 2; i++) st.segs.push({ ax: pts[i][0], ay: pts[i][1], bx: pts[i + 1][0], by: pts[i + 1][1], da: daAt(st, pts[i][1]), db: daAt(st, pts[i + 1][1]), lvl: Math.min(st.lvl, 3), main: st.lvl === 0, j: 0, w: 1 });
+        grid.set(cell(mx, my), st.id); grid.set(cell(nx, ny), st.id);
+        st.x = nx; st.y = ny; st.ang = ang; st.n++;
+        // 分叉：在约 40–60 公里的过渡区最频繁，往上逐渐减少；张角随高度变大；新分支朝远离中轴的一侧张开
+        const p = (0.016 + 0.065 * Math.exp(-Math.pow((km - 52) / 16, 2))) * (st.lvl >= 5 ? 0.6 : 1);
+        if (st.lvl >= 1 && st.n > 3 && all.length < 140 && R() < p) {
+          const out = Math.abs(st.x - x0) > 14 ? Math.sign(st.x - x0) : R.sign();
+          const sd = km > 42 && R() < 0.8 ? out : R.sign(), th = (0.22 + 0.4 * hk) * R.range(0.8, 1.2);
+          const cb = U + clamp(angDiff(st.base + sd * th * 0.85, U), -1.05, 1.05), spd = R.range(1.0, 1.3);
+          spawn({ x: st.x, y: st.y, ang: ang + sd * th, base: cb, lvl: st.lvl + 1, pid: st.id, spd, off: daAt(st, st.y) - (y0 - st.y) * spd + R.range(0, 40),
+            top: R() < 0.15 ? Math.min(86, km + R.range(5, 14)) : R.range(78, 90), lim: R.range(0.6, 0.98) });
+          st.ang -= sd * th * 0.15; st.base = U + clamp(angDiff(st.base - sd * th * 0.08, U), -1.05, 1.05);
         }
       }
-      // 主干到 34–39 公里处一分为三，各自继续向上生长
-      if (st.lvl === 0) {
-        const k = 3; for (let i = 0; i < k; i++) { const sp = (i - (k - 1) / 2) * R.range(0.22, 0.34) + R.range(-0.05, 0.05); stack.push({ x, y, ang: ang + sp, base: U + sp * 0.8, lvl: 1, dd: st.dd + R.range(0, 10), top: R.range(80, 89), km0: kmOf(y) }); }
-      }
-      // 分支从根部到末端逐渐变细、变暗
-      const n = segs.length - segStart;
-      if (st.lvl) for (let i = segStart; i < segs.length; i++) segs[i].w = 1 - 0.62 * (i - segStart) / Math.max(1, n);
     }
+    // 主干到 34–39 公里处分成 4–5 股，向两侧张开
+    function split(st) {
+      const k = R.int(4, 5);
+      for (let i = 0; i < k; i++) {
+        const sp = (i - (k - 1) / 2) / ((k - 1) / 2) * R.range(0.4, 0.55) + R.range(-0.05, 0.05), spd = R.range(1.0, 1.12);
+        spawn({ x: st.x, y: st.y, ang: st.ang + sp, base: U + sp * 0.85, lvl: 1, pid: st.id, spd, off: daAt(st, st.y) - (y0 - st.y) * spd + R.range(0, 12), top: R.range(78, 89), lim: R.range(0.7, 0.98) });
+      }
+    }
+    // 分支从根部到末端逐渐变细、变暗
+    const segs = [];
+    for (const s of all) { const n = s.segs.length; s.segs.forEach((g, i) => { if (s.lvl) g.w = 1 - 0.62 * i / Math.max(1, n); segs.push(g); }); }
     const B = { segs, main: [{ x: x0, y: y0, d: 0 }], Dmain: 1, seed, maxD: Math.max(...segs.map(s => Math.max(s.da, s.db))) };
-    return { B, y0, NB, halfW, glowAt: km => pick(GLW, km),
+    return { B, y0, NB, halfW, bandKm, glowAt: km => pick(GLW, km),
       bandOf: y => (kmOf(y) - 12) / 78 * NB, bandCol: b => [pick(CORE, bandKm(b)), pick(GLW, bandKm(b))] };
   }
   scene({
@@ -81,7 +101,7 @@
       S.jet = []; for (let k = 0; k < 6; k++) S.jet.push(genBolt(SEED * 47 + 200 + k, { x0: 560 + R.range(-6, 6), y0: 872 + curve(560), angle: -Math.PI / 2 + (k - 2.5) * 0.065, length: 872 - yA(R.range(42, 47)), step: 10, wander: 0.14, pull: 0.25, branch: 0.32, maxDepth: 2, branchAng: [0.06, 0.25], branchLen: [0.15, 0.4], rough: 0.16 }));
       // 巨型喷流：一整棵连续生长的"树"。云顶处是一根明亮的主干，向上逐级分叉；越往高处分叉越多、张角越大，
       // 树冠在 60–90 公里向两侧大幅铺开。颜色按高度连续过渡：底部蓝白 → 中段蓝紫 → 顶部红（与精灵同色）
-      S.gj = genJet(SEED * 47 + 777, GX, 872 + curve(GX), yA);
+      S.gj = genJet(SEED * 47 + 777, GX, 882 + curve(GX));   // 从云顶表面（略微嵌入云中）开始
       [0.35, 0.95, 1.7, 2.3].forEach(tt => hit(o + tt, 0.2, 'soft'));
       hit(o + GJ - 0.05, 0.4, 'strike'); hit(o + GJ + 0.1, 0.75, 'shimmer');
       hit(o + SP1 - 0.08, 0.5, 'strike'); hit(o + SP1, 0.6, 'shimmer'); hit(o + SP2, 0.4, 'shimmer'); hit(o + BJ, 0.6, 'shimmer'); hit(o + EL - 0.05, 0.5, 'strike'); hit(o + EL, 0.6, 'shimmer');
@@ -91,12 +111,12 @@
       mk('head', { text: '云顶之上', at: o + 1.3, out: o + 4.15, x: 960, y: 380, ax: 0.5, ay: 0.5, size: 66, weight: 900, inA: 'focus', stagger: 0.12, order: 'center', outA: 'blur' });
       mk('sub', { text: '还有一个 1989 年才首次被拍到的世界', at: o + 1.9, out: o + 4.2, x: 960, y: 460, ax: 0.5, ay: 0.5, size: 34, color: C_TXT });
       const head1 = () => [900, yA(78)];
-      TERM(o + SP1 + 0.25, o + 8.0, 1130, 250, '红色精灵 RED SPRITE', ['出现在 50–90 公里高空', '尺度可达数十公里，只闪现几毫秒'], { term: { glow: [255, 70, 90], lead: { from: head1, ox: -14, delay: 0.1, color: 'rgba(255,170,180,0.7)' } } });
-      TERM(o + GH + 0.35, o + GH + 2.6, 230, 250, '绿色幽灵 GHOST', ['出现在部分红色精灵顶端的绿色辉光', '2019 年才首次被拍到', { text: '发光来源：除了氧，光谱里还有铁、镍 · 仍在研究', preset: 'note', size: 22, hl: [['仍在研究', C_AMB]] }], { term: { glow: [90, 255, 150], color: '#d6ffe4', enColor: '#9dffc0' } });
+      TERM(o + SP1 + 0.25, o + 7.6, 1130, 250, '红色精灵 RED SPRITE', ['出现在 50–90 公里高空', '尺度可达数十公里，只闪现几毫秒'], { term: { glow: [255, 70, 90], lead: { from: head1, ox: -14, delay: 0.1, color: 'rgba(255,170,180,0.7)' } } });
+      TERM(o + GH + 0.35, o + GH + 2.6, 230, 250, '绿色幽灵 GHOST', ['出现在部分红色精灵顶端的绿色辉光', '2019 年才首次被拍到', { text: '光谱里意外出现铁、镍等金属，原子氧的贡献反而很弱 · 仍在研究', preset: 'note', size: 22, hl: [['仍在研究', C_AMB]] }], { term: { glow: [90, 255, 150], color: '#d6ffe4', enColor: '#9dffc0' } });
       TERM(o + BJ + 0.2, o + BJ + 2.55, 660, 600, '蓝色喷流 BLUE JET', ['从云顶向上射出', '可达约 40–50 公里'], { term: { glow: [90, 140, 255] } });
-      TERM(o + GJ + 0.35, o + GJ + 2.65, 640, 410, '巨型喷流 GIGANTIC JET', ['从云顶直冲约 70–90 公里高空', '把雷暴云与电离层"连通"', { text: '2001 年才首次被记录到', preset: 'note', size: 22 }], { term: { glow: [200, 110, 255] } });
-      TERM(o + EL + 0.2, o + EL + 3.1, 1220, 300, '淘气精灵 ELVES', ['约 90 公里高空急速扩张的光环', '直径可达数百公里，持续不到 1 毫秒'], { term: { glow: [255, 120, 70] } });
-      mk('note', { text: '示意动画：这些现象极其短暂，此处已放慢', at: o + 2.6, out: o + EL + 3.15, x: 1850, y: 1040, ax: 1, ay: 1, size: 20 });
+      TERM(o + GJ + 0.15, o + GJ + 2.5, 640, 410, '巨型喷流 GIGANTIC JET', ['从云顶直冲约 70–90 公里高空', '把雷暴云与电离层"连通"', { text: '2001 年才首次被记录到', preset: 'note', size: 22 }], { term: { glow: [200, 110, 255] } });
+      TERM(o + EL + 0.2, o + TEND - 0.05, 1220, 300, '淘气精灵 ELVES', ['约 90 公里高空急速扩张的光环', '直径可达数百公里，持续不到 1 毫秒'], { term: { glow: [255, 120, 70] } });
+      mk('note', { text: '示意动画：这些现象极其短暂，此处已放慢', at: o + 2.6, out: o + TEND, x: 1850, y: 1040, ax: 1, ay: 1, size: 20 });
     },
     draw(ctx, lt, t, S) {
       const cy = lerp(-600, 0, smoother(lt / 2.6));
@@ -106,7 +126,7 @@
       // 气辉
       ctx.save(); ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(80,220,140,0.07)'; ctx.beginPath(); for (let x = -40; x <= W + 40; x += 40) { const y = yA(95) + curve(x); x < 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); ctx.restore();
       // 高度标尺
-      const ra = smooth((lt - 1.8) / 0.8) * (1 - smooth((lt - EL - 3.15) / 0.5));
+      const ra = smooth((lt - 1.8) / 0.8) * (1 - smooth((lt - TEND) / 0.5));
       if (ra > 0) {
         ctx.save(); ctx.globalAlpha = ra; ctx.strokeStyle = 'rgba(170,200,245,0.4)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(84, yA(0) - 40); ctx.lineTo(84, yA(100)); ctx.stroke();
@@ -114,8 +134,14 @@
         ctx.restore();
       }
       // 云顶光源（雷暴内部的闪电从下方照亮云顶）
+      // 巨型喷流的亮度：整棵树先完整保持约 1.3 秒（看清形状和名字），随后上部的红色树冠很快消退，
+      // 下部明亮的主干留得更久（观测中的"拖尾喷流"阶段）；全程带一点轻微的闪烁
+      const gd = lt - GJ, jf = 0.93 + 0.07 * noise1(lt * 18, 5);
+      const jUp = gd <= 0 ? 0 : (gd < 1.3 ? 1 : Math.exp(-(gd - 1.3) / 0.32)) * jf, jLo = gd <= 0 ? 0 : (gd < 1.3 ? 1 : Math.exp(-(gd - 1.3) / 0.6)) * jf;
+      const jAt = km => lerp(jLo, jUp, smooth((km - 40) / 22));
       const fl = [[SP1 - 0.08, 900, 1.0], [SP2 - 0.06, 470, 0.7], [GH - 0.08, GHX, 1.0], [BJ - 0.05, 560, 0.4], [GJ - 0.05, GX, 0.8], [EL - 0.05, 1300, 1.1], [2.1, 1500, 0.4], [3.3, 300, 0.35], [9.8, 1650, 0.4], [12.9, 760, 0.35]];
       const lights = fl.map(([tt, x, k]) => ({ x, y: 900, r: 330, i: (pulse(lt, tt, 0.06) + pulse(lt, tt + 0.05, 0.05) * 0.6) * k * 0.8 }));
+      if (gd > 0) lights.push({ x: GX, y: 905, r: 240, i: 0.55 * jLo * smooth(gd / 0.12), c: [160, 175, 255] });   // 喷流从云顶射出处，云被照亮
       // 地球与远方大气：云顶后方是被地平线微光照亮的薄雾，而不是一条黑带
       ctx.fillStyle = '#060912'; ctx.beginPath(); ctx.moveTo(-60, 2000); for (let x = -60; x <= W + 60; x += 30) ctx.lineTo(x, 892 + curve(x)); ctx.lineTo(W + 60, 2000); ctx.fill();
       const haze = ctx.createLinearGradient(0, 800, 0, 960); haze.addColorStop(0, 'rgba(50,75,135,0)'); haze.addColorStop(0.55, 'rgba(50,75,135,0.22)'); haze.addColorStop(1, 'rgba(36,48,82,0.4)');
@@ -180,30 +206,29 @@
         }
       }
       // —— 巨型喷流 ——
-      const gd = lt - GJ;
-      if (gd > 0) {
-        const J = S.gj, a = gd < 0.7 ? 1 : Math.exp(-(gd - 0.7) / 0.55);
-        if (a > 0.01) {
-          const lf = Ease.outCubic(clamp(gd / 0.55)) * J.B.maxD, yF = J.y0 - lf;   // 生长前沿（自下而上）
-          // 一整片扇形弥散辉光：沿树的外形，颜色随高度渐变（同一个形状，不再是两段拼接）
-          const fan = (c2, k, wk) => {
-            const yS = Math.max(yF, yA(90)); if (J.y0 - yS < 4) return;
-            const gr = c2.createLinearGradient(0, J.y0, 0, yS);
-            for (let i = 0; i <= 10; i++) {
-              const f = i / 10, y = lerp(J.y0, yS, f), km = (1000 - y) / 9.4;
-              const front = smooth((y - yF) / 80), foot = 0.45 + 0.55 * smooth((km - 12.5) / 4), crown = 1 - smooth((km - 76) / 13);   // 前沿、云顶、顶端都渐隐
-              gr.addColorStop(f, rgba(J.glowAt(km), k * a * front * foot * crown));
-            }
-            c2.fillStyle = gr; c2.beginPath();
-            for (let i = 0; i <= 40; i++) { const y = lerp(J.y0, yS, i / 40); c2.lineTo(GX - J.halfW((1000 - y) / 9.4) * wk, y); }
-            for (let i = 40; i >= 0; i--) { const y = lerp(J.y0, yS, i / 40); c2.lineTo(GX + J.halfW((1000 - y) / 9.4) * wk, y); }
-            c2.closePath(); c2.fill();
-          };
-          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.filter = 'blur(28px)'; fan(ctx, 0.15, 0.6); ctx.filter = 'blur(12px)'; fan(ctx, 0.1, 0.25); ctx.restore();
-          GL.ctx.save(); GL.ctx.filter = 'blur(6px)'; fan(GL.ctx, 0.28, 0.75); GL.ctx.restore();
-          drawBolt(ctx, J.B, { lf, I: a * 0.95, rf: -1, bI: 0.9 }, { width: 2.4, glowK: 1.15, bands: J.NB, bandOf: J.bandOf, bandCol: J.bandCol });
-          drawBolt(ctx, J.B, { lf, I: a * 0.45, rf: -1, onlyMain: true }, { width: 5, glowK: 0.9, bands: J.NB, bandOf: J.bandOf, bandCol: J.bandCol });   // 主干更粗更亮
-        }
+      if (gd > 0 && jLo > 0.012) {
+        const J = S.gj;
+        const lf = Ease.outCubic(clamp(gd / 0.55)) * J.B.maxD, yF = J.y0 - lf;   // 生长前沿（自下而上）
+        // 一整片扇形弥散辉光：沿树的外形，颜色和亮度随高度连续变化（同一个形状，不是两段拼接）
+        const fan = (c2, k, wk) => {
+          const yS = Math.max(yF, yA(90)); if (J.y0 - yS < 4) return;
+          const gr = c2.createLinearGradient(0, J.y0, 0, yS);
+          for (let i = 0; i <= 12; i++) {
+            const f = i / 12, y = lerp(J.y0, yS, f), km = (1000 - y) / 9.4;
+            // 前沿、云顶、顶端渐隐；35–55 公里的扇形展开区稍亮
+            const front = smooth((y - yF) / 80), foot = 0.45 + 0.55 * smooth((km - 12.5) / 4), crown = 1 - 0.85 * smooth((km - 66) / 20), lobe = 1 + 0.6 * Math.exp(-Math.pow((km - 47) / 11, 2));
+            gr.addColorStop(f, rgba(J.glowAt(km), k * jAt(km) * front * foot * crown * lobe));
+          }
+          c2.fillStyle = gr; c2.beginPath();
+          for (let i = 0; i <= 40; i++) { const y = lerp(J.y0, yS, i / 40); c2.lineTo(GX - J.halfW((1000 - y) / 9.4, -1) * wk, y); }
+          for (let i = 40; i >= 0; i--) { const y = lerp(J.y0, yS, i / 40); c2.lineTo(GX + J.halfW((1000 - y) / 9.4, 1) * wk, y); }
+          c2.closePath(); c2.fill();
+        };
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.filter = 'blur(28px)'; fan(ctx, 0.15, 0.6); ctx.filter = 'blur(12px)'; fan(ctx, 0.1, 0.25); ctx.restore();
+        GL.ctx.save(); GL.ctx.filter = 'blur(6px)'; fan(GL.ctx, 0.28, 0.75); GL.ctx.restore();
+        const sty = { bands: J.NB, bandOf: J.bandOf, bandCol: J.bandCol, bandI: b => jAt(J.bandKm(b)) };
+        drawBolt(ctx, J.B, { lf, I: 0.95, rf: -1, bI: 0.9 }, Object.assign({ width: 2.4, glowK: 1.15 }, sty));
+        drawBolt(ctx, J.B, { lf, I: 0.45, rf: -1, onlyMain: true }, Object.assign({ width: 5, glowK: 0.9 }, sty));   // 主干更粗更亮
       }
       // —— ELVES ——
       const ed = lt - EL;

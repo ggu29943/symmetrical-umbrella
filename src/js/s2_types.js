@@ -69,8 +69,8 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       S.minus = []; S.plus = [];
       for (let k = 0; k < 22; k++) S.minus.push([R.range(380, 760), R.range(430, 560), R() * 9]);
       for (let k = 0; k < 26; k++) S.plus.push([R.range(300, 1750), R.range(95, 165), R() * 9]);
-      TERM(o + 1.5, o + 5.2, 110, 760, '负极性云地闪 NEGATIVE CG', ['约占九成 · 把负电荷送到地面', '常有多次回击'], { term: { hl: [['负极性', C_CYAN]] } });
-      TERM(o + 7.0, o + 11.85, 560, 360, '正极性云地闪 POSITIVE CG', ['约占一成 · 多从高处的云砧发出', '可落在远离雷暴核心的地方', '通常只击一次，却更强、更持久', { text: '更容易引发火灾', color: '#ffb27a' }], { term: { hl: [['正极性', C_GOLD]] }, gap: 46 });
+      TERM(o + 1.5, o + 5.2, 110, 760, '负极性云地闪 NEGATIVE CLOUD-TO-GROUND', ['约占九成 · 把负电荷送到地面', '常有多次回击'], { term: { hl: [['负极性', C_CYAN]] } });
+      TERM(o + 7.0, o + 11.85, 560, 360, '正极性云地闪 POSITIVE CLOUD-TO-GROUND', ['约占一成 · 多从高处的云砧发出', '可落在远离雷暴核心的地方', '通常只击一次，却更强、更持久', { text: '更容易引发火灾', color: '#ffb27a' }], { term: { hl: [['正极性', C_GOLD]], enColor: '#ffd9a0' }, gap: 46 });
     },
     draw(ctx, lt, t, S) {
       const px = lerp(80, -360, smoother((lt - 3.9) / 2.8));
@@ -139,7 +139,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       const lab = (at, x, name, sub) => { mk('term', biName({ text: name, at: o + at, out: o + 8.75, x, y: 860, ax: 0.5, ay: 0.5, size: 48 })); mk('sub', { text: sub, at: o + at + 0.45, out: o + 8.8, x, y: 925, ax: 0.5, ay: 0.5, size: 28 }); };
       lab(1.2, 365, '云内闪 INTRA-CLOUD', '在同一朵云内部放电');
       lab(3.4, 1055, '云际闪 CLOUD-TO-CLOUD', '在两朵云之间跳跃');
-      lab(5.55, 1690, '云空闪 CLOUD-TO-AIR', '窜入晴空，戛然而止');
+      lab(5.55, 1635, '云空闪 CLOUD-TO-AIR', '窜入晴空，戛然而止');
     },
     draw(ctx, lt, t, S) {
       camera(ctx, -lt * 6, 0, 1.0 + lt * 0.003);
@@ -184,7 +184,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       const br = S.fork.segs.filter(s => s.lvl === 1 && s.db < S.fork.Dmain && s.bx < 1000 && s.by > 280 && s.by < 620).sort((a, b) => a.bx - b.bx);
       const tip = br.length ? [br[0].bx, br[0].by] : [880, 460];
       TERM(o + 0.7, o + 3.85, 110, 790, '片状闪电 SHEET LIGHTNING', ['看不见通道，只见整片云被照亮', { text: '——其实是被云遮住的云内闪', color: C_TXT }], { gap: 46 });
-      TERM(o + A1 + 1.0, o + B1 - 0.55, 110, 360, '叉状闪电 FORKED LIGHTNING', [{ text: '枝杈，是先导留下的“岔路”', lead: { from: () => tip, ox: 420, delay: 0.2, elbow: 'h' } }, '回击时被一同点亮']);
+      TERM(o + A1 + 1.0, o + B1 - 0.55, 110, 360, '叉状闪电 FORKED LIGHTNING', [{ text: '枝杈，是先导留下的“岔路”', lead: { from: () => tip, ox: 420, delay: 0.2, elbow: 'v' } }, '回击时被一同点亮']);
       TERM(o + B1 + 0.9, o + 11.2, 110, 360, '链状闪电 BEAD LIGHTNING', ['消退时，断成一串发光的“珠子”'], { term: { outA: 'beads' } });
       UNK(o + B1 + 2.0, o + 11.25, 112, 520, '成因尚无定论');
     },

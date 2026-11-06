@@ -148,10 +148,11 @@ function drawBolt(ctx, B, st, sty = {}) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   gctx.lineCap = 'round';
   for (const [key0, arr] of buckets) {
-    let key = key0, core = core0, glow = glow0;
-    if (CB) { const p = key0.indexOf('|'); [core, glow] = sty.bandCol(+key0.slice(0, p)); key = key0.slice(p + 1); }
+    let key = key0, core = core0, glow = glow0, bk = 1;
+    // sty.bandI(band)：可选，按高度给亮度再乘一个系数（如巨型喷流消退时上部先暗、主干后暗）
+    if (CB) { const p = key0.indexOf('|'), band = +key0.slice(0, p); [core, glow] = sty.bandCol(band); if (sty.bandI) bk = sty.bandI(band); key = key0.slice(p + 1); }
     const str = key[0] === 'S', wc = +key[1], q = +key.slice(3);
-    const b = str ? (wc === 0 ? I : I * bI) * (q >= FB ? 1 : (q + 0.5) / FB) : (q + 0.5) / BUCK * 2;
+    const b = (str ? (wc === 0 ? I : I * bI) * (q >= FB ? 1 : (q + 0.5) / FB) : (q + 0.5) / BUCK * 2) * bk;
     if (b < 0.004) continue;
     const wf = wc === 0 ? 1 : wc === 1 ? 0.55 : 0.32;
     const c = str ? mixc(glow, core, clamp(0.45 + b * 0.7)) : mixc(leadCol, [235, 235, 255], clamp(b * 0.5));
