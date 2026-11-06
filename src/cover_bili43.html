@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>闪电 · B 站封面 4:3</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  html, body { margin: 0; background: #000; }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+  #cv { position: absolute; left: 0; top: 0; }
+  .t { position: absolute; white-space: pre; -webkit-font-smoothing: antialiased; }
+  #tag { left: 112px; top: 150px; font: 500 30px 'NSans', sans-serif; letter-spacing: 0.4em; color: rgba(150, 205, 255, 0.9); }
+  #title { left: 84px; top: 182px; font: 900 236px/1 'NSerif', serif; letter-spacing: 0.12em; color: #eef4ff;
+           text-shadow: 0 0 22px rgba(120, 180, 255, 0.55), 0 0 70px rgba(90, 150, 255, 0.35), 0 0 140px rgba(70, 120, 255, 0.25); }
+  #hook { left: 108px; top: 452px; font: 700 86px/1.2 'NSerif', serif; letter-spacing: 0.04em; color: #eef4ff;
+          text-shadow: 0 0 14px rgba(120, 180, 255, 0.4), 0 2px 18px rgba(0, 0, 0, 0.7); }
+  #hook em { font-style: normal; color: #ff8fa6; text-shadow: 0 0 16px rgba(255, 70, 110, 0.65), 0 0 46px rgba(255, 50, 100, 0.35), 0 2px 18px rgba(0, 0, 0, 0.7); }
+  #line { left: 112px; top: 676px; width: 560px; height: 1.5px; background: linear-gradient(90deg, rgba(255, 160, 190, 0.9), rgba(170, 210, 255, 0)); }
+  #kw { left: 144px; top: 646px; font: 500 30px 'NSans', sans-serif; letter-spacing: 0.12em; color: rgba(214, 226, 248, 0.9); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8); }
+  #kw i { display: inline-block; width: 13px; height: 13px; border-radius: 50%; margin: 0 12px 3px 0; vertical-align: middle; }
+  #kw .sep { display: inline-block; width: 30px; }
+</style>
+<script>
+  // B 站投稿封面：16:9，1920×1080。文字放在左上半部，避开信息流卡片底部的播放量 / 时长角标，
+  // 左右各留出 120 px 以上，以免被 16:10 等比例的卡片裁掉。
+  // 4:3（1440×1080）：B 站手机首页双列信息流用的封面比例
+  window.STAGE = { w: 1440, h: 1080 };
+  window.COVER = { GX: 1190, SPX: 830, SPN: 5, ELX: 900, ELR: 620, blueJet: false, darkX: 330 };
+</script>
+</head>
+<body>
+<div id="stage" style="width:1440px">
+  <canvas id="cv" width="1440" height="1080"></canvas>
+  <div class="t" id="tag">三分钟科普短片</div>
+  <div class="t" id="title">闪电</div>
+  <div class="t" id="hook">云层之上，
+还有<em>另一种闪电</em></div>
+  <div class="t" id="line"></div>
+</div>
+<script src="js/util.js"></script>
+<script src="js/gfx.js"></script>
+<script src="js/cover_bili.js"></script>
+</body>
+</html>

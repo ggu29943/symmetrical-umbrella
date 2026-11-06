@@ -6,10 +6,10 @@
 'use strict';
 (async () => {
   const q = new URLSearchParams(location.search), seed = +(q.get('seed') || 7);
-  const C = Object.assign({ OY: -100, GX: 1530, BJX: 1150, SPX: 930, ELX: 1120 }, window.COVER || {});
+  const C = Object.assign({ OY: -100, GX: 1530, BJX: 1150, SPX: 930, ELX: 1120, SPN: 7, ELR: 760, blueJet: true, darkX: 420 }, window.COVER || {});
   if (document.fonts) { try { await Promise.all([...document.fonts].map(f => f.load().catch(() => 0))); await document.fonts.ready; } catch (e) { } }
   const ctx = document.getElementById('cv').getContext('2d');
-  const yA = km => 1000 - km * 9.4, curve = x => (x - 960) * (x - 960) / 24000, R = RNG(seed * 131 + 7);
+  const yA = km => 1000 - km * 9.4, curve = x => (x - W / 2) * (x - W / 2) / 24000, R = RNG(seed * 131 + 7);
   GL.init(); Cam.set(0, C.OY, 1); GL.begin(); Cam.apply(ctx);
 
   // ── 天空与星空 ──
@@ -19,7 +19,7 @@
   ctx.save(); ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(80,220,140,0.08)'; ctx.beginPath(); for (let x = -40; x <= W + 40; x += 40) { const y = yA(95) + curve(x); x < 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); ctx.restore();
 
   // ── 淘气精灵 ELVES：约 90 公里高处急速扩张的红橙色光环 ──
-  { const cx = C.ELX, cy = yA(90) + curve(cx), rx = 760, ry = rx * 0.085;
+  { const cx = C.ELX, cy = yA(90) + curve(cx), rx = C.ELR, ry = rx * 0.085;
     // 柔和的"甜甜圈"：中心暗、环上最亮、向外渐隐（侧面远看是一道压扁的红色光环）
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(cx, cy); ctx.scale(1, ry / rx); ctx.filter = 'blur(5px)';
     const eg = ctx.createRadialGradient(0, 0, rx * 0.55, 0, 0, rx * 1.12);
@@ -54,7 +54,7 @@
     const up = genBolt(seed * 47 + 90 + sprites.length + cx, { x0: x, y0: head, angle: -Math.PI / 2, length: head - top, step: 8, wander: 0.15, branch: 0.3, maxDepth: 2, branchAng: [0.05, 0.3], branchLen: [0.2, 0.5], rough: 0.15 });
     sprites.push({ x, top, head, tend, up, w: R.range(18, 30) * sc, a: R.range(0.8, 1) * sc });
   } };
-  mkSprite(C.SPX, 7, 1.1);
+  mkSprite(C.SPX, C.SPN, 1.1);
   for (const c of sprites) {
     const a = Math.min(1, c.a);
     const hg = ctx.createRadialGradient(c.x, c.head - 20, 0, c.x, c.head - 20, c.w * 3.2);
@@ -71,7 +71,7 @@
     ctx.restore(); }
 
   // ── 蓝色喷流：从云顶向上射出的蓝色锥体，到约 40–50 公里 ──
-  { const x0 = C.BJX, y0 = 872 + curve(x0), yt = yA(45);
+  if (C.blueJet) { const x0 = C.BJX, y0 = 872 + curve(x0), yt = yA(45);
     const cg = ctx.createLinearGradient(0, y0, 0, yt); cg.addColorStop(0, rgba([120, 170, 255], 0.5)); cg.addColorStop(1, 'rgba(60,110,255,0)');
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = cg; ctx.beginPath(); ctx.filter = 'blur(10px)'; ctx.moveTo(x0 - 10, y0); ctx.lineTo(x0 - 60, yt); ctx.lineTo(x0 + 60, yt); ctx.lineTo(x0 + 10, y0); ctx.fill(); ctx.restore();
     for (let k = 0; k < 5; k++) { const B = genBolt(seed * 47 + 200 + k, { x0: x0 + R.range(-5, 5), y0, angle: -Math.PI / 2 + (k - 2) * 0.05, length: y0 - yA(R.range(41, 46)), step: 10, wander: 0.12, pull: 0.3, branch: 0.18, maxDepth: 2, branchAng: [0.05, 0.2], branchLen: [0.12, 0.3], rough: 0.15 });
@@ -100,7 +100,7 @@
   GL.flush(ctx, 0.95);
   // ── 标题区柔和压暗、暗角与颗粒（与正片一致） ──
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const lg = ctx.createRadialGradient(420, 470, 0, 420, 470, 760); lg.addColorStop(0, 'rgba(0,0,0,0.42)'); lg.addColorStop(0.6, 'rgba(0,0,0,0.22)'); lg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
+  const lg = ctx.createRadialGradient(C.darkX, 470, 0, C.darkX, 470, 760); lg.addColorStop(0, 'rgba(0,0,0,0.42)'); lg.addColorStop(0.6, 'rgba(0,0,0,0.22)'); lg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
   const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.38, W / 2, H / 2, H * 1.05); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
   const gc = makeCanvas(256, 256), gx2 = gc.getContext('2d'), d = gx2.createImageData(256, 256), GR = RNG(901);
   for (let i = 0; i < d.data.length; i += 4) { const v = 128 + GR.gauss() * 40; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
