@@ -307,7 +307,7 @@ function deckShape(top, bottom, ragged = 0.08) { return (u, v) => smooth((v - to
 const _lit = { c: null, x: null };
 function drawCloud(ctx, cl, x, y, w, h, lights = [], o = {}) {
   const alpha = o.alpha === undefined ? 1 : o.alpha;
-  ctx.save(); ctx.globalAlpha = alpha; ctx.drawImage(cl.dark, x, y, w, h); ctx.restore();
+  if (!o.litOnly) { ctx.save(); ctx.globalAlpha = alpha; ctx.drawImage(cl.dark, x, y, w, h); ctx.restore(); } // litOnly：只叠加被照亮的部分
   const amb = o.amb || 0;
   if (amb > 0.003) { ctx.save(); ctx.globalAlpha = clamp(amb * alpha); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(cl.lit, x, y, w, h); ctx.restore(); }
   const L = lights.filter(l => l.i > 0.004);

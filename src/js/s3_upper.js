@@ -30,6 +30,7 @@
       { const y0 = 872 + curve(GX);
         S.gjT = []; for (let k = 0; k < 4; k++) S.gjT.push(genBolt(SEED * 47 + 300 + k, { x0: GX + R.range(-5, 5), y0, angle: -Math.PI / 2 + (k - 1.5) * 0.05, length: y0 - yA(R.range(53, 58)), step: 10, wander: 0.16, pull: 0.3, branch: 0.3, maxDepth: 2, branchAng: [0.08, 0.3], branchLen: [0.15, 0.4], rough: 0.18 }));
         S.gjC = []; for (let k = 0; k < 10; k++) S.gjC.push(genBolt(SEED * 47 + 320 + k, { x0: GX + R.range(-14, 14), y0: yA(55), angle: -Math.PI / 2 + (k - 4.5) * 0.085, length: yA(55) - yA(R.range(80, 90)), step: 9, wander: 0.14, pull: 0.25, branch: 0.35, maxDepth: 2, branchAng: [0.05, 0.25], branchLen: [0.2, 0.5], rough: 0.15 })); }
+      [0.35, 0.95, 1.7, 2.3].forEach(tt => hit(o + tt, 0.2, 'soft'));
       hit(o + GJ - 0.05, 0.4, 'strike'); hit(o + GJ + 0.1, 0.75, 'shimmer');
       hit(o + SP1 - 0.08, 0.5, 'strike'); hit(o + SP1, 0.6, 'shimmer'); hit(o + SP2, 0.4, 'shimmer'); hit(o + BJ, 0.6, 'shimmer'); hit(o + EL - 0.05, 0.5, 'strike'); hit(o + EL, 0.6, 'shimmer');
       // 文字
@@ -63,11 +64,23 @@
       // 云顶光源（雷暴内部的闪电从下方照亮云顶）
       const fl = [[SP1 - 0.08, 900, 1.0], [SP2 - 0.06, 470, 0.7], [GH - 0.08, GHX, 1.0], [BJ - 0.05, 560, 0.4], [GJ - 0.05, GX, 0.8], [EL - 0.05, 1300, 1.1], [2.1, 1500, 0.4], [3.3, 300, 0.35], [9.8, 1650, 0.4], [12.9, 760, 0.35]];
       const lights = fl.map(([tt, x, k]) => ({ x, y: 900, r: 330, i: (pulse(lt, tt, 0.06) + pulse(lt, tt + 0.05, 0.05) * 0.6) * k * 0.8 }));
-      // 地球与云顶
-      ctx.fillStyle = '#04060c'; ctx.beginPath(); ctx.moveTo(-60, 2000); for (let x = -60; x <= W + 60; x += 30) ctx.lineTo(x, 892 + curve(x)); ctx.lineTo(W + 60, 2000); ctx.fill();
-      const rim = ctx.createLinearGradient(0, 860, 0, 900); rim.addColorStop(0, 'rgba(60,110,220,0)'); rim.addColorStop(1, 'rgba(60,110,220,0.12)'); ctx.fillStyle = rim; ctx.fillRect(-60, 820, W + 120, 90);
+      // 地球与远方大气：云顶后方是被地平线微光照亮的薄雾，而不是一条黑带
+      ctx.fillStyle = '#060912'; ctx.beginPath(); ctx.moveTo(-60, 2000); for (let x = -60; x <= W + 60; x += 30) ctx.lineTo(x, 892 + curve(x)); ctx.lineTo(W + 60, 2000); ctx.fill();
+      const haze = ctx.createLinearGradient(0, 800, 0, 960); haze.addColorStop(0, 'rgba(50,75,135,0)'); haze.addColorStop(0.55, 'rgba(50,75,135,0.22)'); haze.addColorStop(1, 'rgba(36,48,82,0.4)');
+      ctx.fillStyle = haze; ctx.fillRect(-60, 800, W + 120, 170);
+      // 雷暴云体：云顶带下方是厚厚的云体，一直延伸到镜头下方（镜头从云中升起时看到的是云，而不是黑底）
+      const body = TEX.get('cbody3', () => makeCloud(SEED + 128, 1600, 760, (u, v) => smooth((v - 0.3) / 0.1 + (fbm(u * 5, 0.4, 3, SEED + 129) - 0.5) * 1.2), { puffs: 2200, rMin: 0.04, rMax: 0.22, flat: () => 0.7, th0: 0.4, base: 0.55, ao: 3.2, dark: [8, 10, 21], top: [54, 64, 96] }));
       const topT = TEX.get('tops', () => makeCloud(SEED + 125, 1600, 300, (u, v) => { const e = 0.42 + (fbm(u * 3, 0.2, 3, SEED + 126) - 0.5) * 0.45 + (fbm(u * 11, 0.5, 2, SEED + 127) - 0.5) * 0.22; return smooth((v - e) / 0.12); }, { puffs: 1200, rMin: 0.04, rMax: 0.22, flat: () => 0.7, th0: 0.4, dark: [10, 13, 26], top: [60, 72, 104] }));
+      // 云体内部的闪电闪光（镜头穿出云层的那几秒）
+      const inner = [[0.35, 520, 1250, 0.75], [0.95, 1420, 1380, 0.6], [1.05, 1350, 1300, 0.45], [1.7, 860, 1150, 0.55], [2.3, 300, 1300, 0.4]]
+        .map(([tt, x, y, k]) => ({ x, y, r: 560, i: (pulse(lt, tt, 0.07) + pulse(lt, tt + 0.06, 0.05) * 0.6) * k }));
       drawCloud(ctx, topT, -120, 760, 2160, 360, lights, { amb: 0.035 });
+      // 云体从云顶带的下半部分柔和地接上（顶缘羽化、不规则），一直延伸到镜头下方
+      drawCloud(ctx, body, -140, 712, 2200, 960, [], { amb: 0.02 });
+      // 越往下越隐入暗处（只有云顶被星光勾亮）；云内闪光叠在暗处之后，才显得透亮
+      const deep = ctx.createLinearGradient(0, 1020, 0, 1720); deep.addColorStop(0, 'rgba(2,3,8,0)'); deep.addColorStop(0.3, 'rgba(2,3,8,0.45)'); deep.addColorStop(1, 'rgba(2,3,8,0.8)');
+      ctx.fillStyle = deep; ctx.fillRect(-160, 1020, W + 320, 760);
+      drawCloud(ctx, body, -140, 712, 2200, 960, inner, { litOnly: true });
       // —— 红色精灵 ——
       const sprite = (cols, t0, k) => {
         for (const c of cols) {
