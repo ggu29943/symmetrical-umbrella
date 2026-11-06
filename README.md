@@ -1,6 +1,6 @@
 # 闪电 · 天空放电的科学
 
-一支 3 分钟的闪电科普短片：1920×1080，60 fps，只用中文文字和配乐。
+一支约 3 分钟（3:03）的闪电科普短片：1920×1080，60 fps，只用中文文字和配乐。
 **画面、文字动效和配乐全部由代码生成**，没有使用任何外部图片、视频或音频素材。
 
 ## 成品
@@ -28,7 +28,7 @@ node tools/timeline.js       # 导出时间表：场景起止、每一道闪电�
 python3 tools/music.py       # 按时间表合成配乐并完成母带处理（压缩 + 限幅，−13 LUFS）→ build/music.wav
 ffmpeg -i build/music.wav -c:a aac -b:a 256k build/music.m4a
 cp build/music.m4a src/
-node tools/render.js 4 7     # 4 个进程逐帧渲染 10,800 帧（种子 7）→ build/chunk_*.mp4
+node tools/render.js 4 7     # 4 个进程逐帧渲染全部 10,980 帧（种子 7）→ build/chunk_*.mp4
 # 拼接并压制成品（命令见 tools/encode.sh）
 bash tools/encode.sh
 node tools/build.js          # 打包单文件网页版 → dist/lightning.html

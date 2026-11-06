@@ -3,7 +3,8 @@
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const path = require('path'), fs = require('fs');
-const WORKERS = +(process.argv[2] || 4), SEED = +(process.argv[3] || 7), FPS = 60, TOTAL = 180 * FPS;
+const WORKERS = +(process.argv[2] || 4), SEED = +(process.argv[3] || 7), FPS = 60;
+const TOTAL = Math.round(JSON.parse(require('fs').readFileSync('build/timeline.json', 'utf8')).duration * FPS); // 先运行 tools/timeline.js
 const FROM = +(process.env.FROM || 0), TO = +(process.env.TO || TOTAL);
 fs.mkdirSync('build', { recursive: true });
 async function worker(id, a, b) {

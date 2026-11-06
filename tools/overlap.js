@@ -5,7 +5,8 @@ const { chromium } = require('playwright'); const path = require('path');
   await p.goto('file://' + path.resolve('src/index.html') + '?render=1&seed=7');
   await p.waitForFunction(() => window.RENDER_READY === true, null, { timeout: 120000 });
   const seen = new Map(), off = new Map();
-  for (let t = 0; t < 180; t += 0.2) {
+  const DUR = await p.evaluate(() => DURATION);
+  for (let t = 0; t < DUR; t += 0.2) {
     const bx = await p.evaluate(tt => window.textBoxes(tt), t);
     for (const a of bx) {
       if (a.x < 20 || a.y < 10 || a.x + a.w > 1900 || a.y + a.h > 1075) { const k = a.id; if (!off.has(k)) off.set(k, t.toFixed(1)); }

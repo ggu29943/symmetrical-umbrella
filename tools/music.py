@@ -293,8 +293,8 @@ final = [h['t'] for h in TL['hits'] if h['kind'] == 'final'][0]
 pad(Bbmaj7, e0, e0 + 3.5, amp=0.11, att=0.8, rel=1.0, fc=1400)
 pad(Cc, e0 + 3.5, final, amp=0.11, att=0.8, rel=0.3, fc=1500, fc2=2400, bright_t=3)
 arp([(e0, Bbmaj7), (e0 + 3.5, Cc)], e0 + 0.4, final - 0.4, 60 / 72 / 4, amp=0.03, fade=0.8, rise=1.0)
-pad(DmajAdd9, final, 180.0, amp=0.12, att=0.05, rel=3.0, fc=2800)
-drone(26, e0, 180.0, amp=0.08, att=2, rel=3)
+pad(DmajAdd9, final, DUR, amp=0.12, att=0.05, rel=3.0, fc=2800)
+drone(26, e0, DUR, amp=0.08, att=2, rel=3)
 for k, m in enumerate((74, 78, 81, 86)): bell(midi(m), final + 0.05 + k * 0.18, amp=0.05, dur=4, pan=(k - 1.5) * 0.3)
 
 # ═══════ 同步音效 ═══════

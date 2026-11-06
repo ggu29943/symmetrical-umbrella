@@ -6,7 +6,7 @@
   const D = TL.tle;
   const yA = km => 1000 - km * 9.4;                     // 高度 → 画面 y
   const curve = x => (x - 960) * (x - 960) / 24000;      // 地球曲率
-  const SP1 = 4.75, SP2 = 6.15, BJ = 8.35, EL = 11.05;
+  const SP1 = 4.75, SP2 = 6.15, BJ = 8.35, GJ = 11.2, EL = 14.05, GX = 1450;
   scene({
     name: 'tle', t0: D.t0, dur: D.dur, fi: D.fi,
     setup(S, sc) {
@@ -26,6 +26,11 @@
       };
       S.sp1 = mkSprite(900, 6, 1); S.sp2 = mkSprite(470, 3, 0.75);
       S.jet = []; for (let k = 0; k < 6; k++) S.jet.push(genBolt(SEED * 47 + 200 + k, { x0: 560 + R.range(-6, 6), y0: 872 + curve(560), angle: -Math.PI / 2 + (k - 2.5) * 0.065, length: 872 - yA(R.range(42, 47)), step: 10, wander: 0.14, pull: 0.25, branch: 0.32, maxDepth: 2, branchAng: [0.06, 0.25], branchLen: [0.15, 0.4], rough: 0.16 }));
+      // 巨型喷流：下半段偏蓝的树状主干（云顶 → 约 55 公里），上半段散开成红紫色"树冠"（→ 约 80–90 公里）
+      { const y0 = 872 + curve(GX);
+        S.gjT = []; for (let k = 0; k < 4; k++) S.gjT.push(genBolt(SEED * 47 + 300 + k, { x0: GX + R.range(-5, 5), y0, angle: -Math.PI / 2 + (k - 1.5) * 0.05, length: y0 - yA(R.range(53, 58)), step: 10, wander: 0.16, pull: 0.3, branch: 0.3, maxDepth: 2, branchAng: [0.08, 0.3], branchLen: [0.15, 0.4], rough: 0.18 }));
+        S.gjC = []; for (let k = 0; k < 10; k++) S.gjC.push(genBolt(SEED * 47 + 320 + k, { x0: GX + R.range(-14, 14), y0: yA(55), angle: -Math.PI / 2 + (k - 4.5) * 0.085, length: yA(55) - yA(R.range(80, 90)), step: 9, wander: 0.14, pull: 0.25, branch: 0.35, maxDepth: 2, branchAng: [0.05, 0.25], branchLen: [0.2, 0.5], rough: 0.15 })); }
+      hit(o + GJ - 0.05, 0.4, 'strike'); hit(o + GJ + 0.1, 0.75, 'shimmer');
       hit(o + SP1 - 0.08, 0.5, 'strike'); hit(o + SP1, 0.6, 'shimmer'); hit(o + SP2, 0.4, 'shimmer'); hit(o + BJ, 0.6, 'shimmer'); hit(o + EL - 0.05, 0.5, 'strike'); hit(o + EL, 0.6, 'shimmer');
       // 文字
       mk('head', { text: '云顶之上', at: o + 1.3, out: o + 4.15, x: 960, y: 380, ax: 0.5, ay: 0.5, size: 66, weight: 900, inA: 'focus', stagger: 0.12, order: 'center', outA: 'blur' });
@@ -33,8 +38,9 @@
       const head1 = () => [900, yA(78)];
       TERM(o + SP1 + 0.25, o + 8.0, 1130, 250, '红色精灵', ['出现在 50–90 公里高空', '只闪现几毫秒'], { term: { glow: [255, 70, 90], lead: { from: head1, ox: -14, delay: 0.1, color: 'rgba(255,170,180,0.7)' } } });
       TERM(o + BJ + 0.2, o + 10.9, 660, 600, '蓝色喷流', ['从云顶向上射出', '可达约 40–50 公里'], { term: { glow: [90, 140, 255] } });
-      TERM(o + EL + 0.2, o + 14.15, 1060, 300, 'ELVES', ['约 90 公里高空急速扩张的光环', '直径可达数百公里，持续不到 1 毫秒'], { term: { glow: [255, 120, 70], tracking: 0.2 } });
-      mk('note', { text: '示意动画：这些现象极其短暂，此处已放慢', at: o + 2.6, out: o + 14.2, x: 1850, y: 1040, ax: 1, ay: 1, size: 20 });
+      TERM(o + GJ + 0.35, o + 13.85, 880, 410, '巨型喷流', ['从云顶直冲约 70–90 公里高空', '把雷暴云与电离层"连通"', { text: '2001 年才首次被记录到', preset: 'note', size: 22 }], { term: { glow: [200, 110, 255] } });
+      TERM(o + EL + 0.2, o + 17.15, 1060, 300, 'ELVES', ['约 90 公里高空急速扩张的光环', '直径可达数百公里，持续不到 1 毫秒'], { term: { glow: [255, 120, 70], tracking: 0.2 } });
+      mk('note', { text: '示意动画：这些现象极其短暂，此处已放慢', at: o + 2.6, out: o + 17.2, x: 1850, y: 1040, ax: 1, ay: 1, size: 20 });
     },
     draw(ctx, lt, t, S) {
       const cy = lerp(-600, 0, smoother(lt / 2.6));
@@ -44,7 +50,7 @@
       // 气辉
       ctx.save(); ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(80,220,140,0.07)'; ctx.beginPath(); for (let x = -40; x <= W + 40; x += 40) { const y = yA(95) + curve(x); x < 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); ctx.restore();
       // 高度标尺
-      const ra = smooth((lt - 1.8) / 0.8) * (1 - smooth((lt - 14.2) / 0.5));
+      const ra = smooth((lt - 1.8) / 0.8) * (1 - smooth((lt - 17.2) / 0.5));
       if (ra > 0) {
         ctx.save(); ctx.globalAlpha = ra; ctx.strokeStyle = 'rgba(170,200,245,0.4)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(84, yA(0) - 40); ctx.lineTo(84, yA(100)); ctx.stroke();
@@ -52,7 +58,7 @@
         ctx.restore();
       }
       // 云顶光源（雷暴内部的闪电从下方照亮云顶）
-      const fl = [[SP1 - 0.08, 900, 1.0], [SP2 - 0.06, 470, 0.7], [BJ - 0.05, 560, 0.4], [EL - 0.05, 1300, 1.1], [2.1, 1500, 0.4], [3.3, 300, 0.35], [9.8, 1650, 0.4], [12.9, 760, 0.35]];
+      const fl = [[SP1 - 0.08, 900, 1.0], [SP2 - 0.06, 470, 0.7], [BJ - 0.05, 560, 0.4], [GJ - 0.05, GX, 0.8], [EL - 0.05, 1300, 1.1], [2.1, 1500, 0.4], [3.3, 300, 0.35], [9.8, 1650, 0.4], [12.9, 760, 0.35]];
       const lights = fl.map(([tt, x, k]) => ({ x, y: 900, r: 330, i: (pulse(lt, tt, 0.06) + pulse(lt, tt + 0.05, 0.05) * 0.6) * k * 0.8 }));
       // 地球与云顶
       ctx.fillStyle = '#04060c'; ctx.beginPath(); ctx.moveTo(-60, 2000); for (let x = -60; x <= W + 60; x += 30) ctx.lineTo(x, 892 + curve(x)); ctx.lineTo(W + 60, 2000); ctx.fill();
@@ -86,6 +92,25 @@
           const cg = ctx.createLinearGradient(0, y0, 0, yt); cg.addColorStop(0, rgba([120, 170, 255], 0.5 * a)); cg.addColorStop(1, 'rgba(60,110,255,0)');
           ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = cg; ctx.beginPath(); ctx.moveTo(x0 - 10, y0); ctx.lineTo(x0 - 70 * grow, yt); ctx.lineTo(x0 + 70 * grow, yt); ctx.lineTo(x0 + 10, y0); ctx.fill(); ctx.restore();
           for (const B of S.jet) drawBolt(ctx, B, { lf: grow * B.maxD, I: a * 0.9, rf: -1, bI: 0.8 }, { width: 1.5, core: [200, 225, 255], glow: [60, 120, 255], glowK: 1.2 });
+        }
+      }
+      // —— 巨型喷流 ——
+      const gd = lt - GJ;
+      if (gd > 0) {
+        const tg = Ease.outCubic(clamp(gd / 0.3)), cg = Ease.outCubic(clamp((gd - 0.22) / 0.42)), a = gd < 0.65 ? 1 : Math.exp(-(gd - 0.65) / 0.55);
+        if (a > 0.01) {
+          const y0 = 872 + curve(GX), yt = lerp(y0, yA(55), tg);
+          ctx.save(); ctx.globalCompositeOperation = 'lighter';
+          const tgr = ctx.createLinearGradient(0, y0, 0, yt); tgr.addColorStop(0, rgba([120, 170, 255], 0.45 * a)); tgr.addColorStop(1, rgba([110, 120, 255], 0.12 * a));
+          ctx.fillStyle = tgr; ctx.beginPath(); ctx.moveTo(GX - 12, y0); ctx.lineTo(GX - 40 * tg, yt); ctx.lineTo(GX + 40 * tg, yt); ctx.lineTo(GX + 12, y0); ctx.fill();
+          if (cg > 0) { // 红紫色"树冠"的弥散辉光
+            ctx.translate(GX, yA(70)); ctx.scale(1, 1.35);
+            const cr = ctx.createRadialGradient(0, 0, 0, 0, 0, 170 * cg); cr.addColorStop(0, rgba([230, 70, 150], 0.2 * a)); cr.addColorStop(0.6, rgba([200, 50, 140], 0.08 * a)); cr.addColorStop(1, 'rgba(200,50,140,0)');
+            ctx.fillStyle = cr; ctx.fillRect(-180, -180, 360, 360);
+          }
+          ctx.restore();
+          for (const B of S.gjT) drawBolt(ctx, B, { lf: tg * B.maxD, I: a * 0.95, rf: -1, bI: 0.8 }, { width: 1.8, core: [215, 232, 255], glow: [70, 120, 255], glowK: 1.2 });
+          for (const B of S.gjC) drawBolt(ctx, B, { lf: cg * B.maxD, I: a * 0.55, rf: -1, bI: 0.8 }, { width: 1.2, core: [255, 175, 210], glow: [215, 50, 135], glowK: 0.8 });
         }
       }
       // —— ELVES ——
