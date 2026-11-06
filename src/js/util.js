@@ -66,7 +66,14 @@ function noise1(x, s = 0) { const i = Math.floor(x), f = x - i, u = f * f * (3 -
 const flicker = (t, rate, s = 0) => hash1(Math.floor(t * rate), s);
 
 // 颜色
-function rgba(c, a = 1) { return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`; }
+// 透明度"抖动"：画布的颜色透明度只有 256 级，缓慢淡出时会所有像素同一帧跳一级（看起来一卡一卡）。
+// 每帧给每个半透明颜色加 ±半级的确定性随机偏移，把量化误差变成看不见的细噪声，淡出因此连续平滑。
+let _dzi = 0, _dzf = 0;
+function ditherFrame(f) { _dzf = f; _dzi = 0; }
+function rgba(c, a = 1) {
+  if (a > 0 && a < 1) { a += (hash2(_dzi++, _dzf, 77) - 0.5) / 255; a = a < 0 ? 0 : a > 1 ? 1 : a; }
+  return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+}
 const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 const COL = {
   bg: [5, 7, 13], core: [240, 248, 255], ice: [207, 232, 255], blue: [111, 182, 255], deep: [58, 92, 255],

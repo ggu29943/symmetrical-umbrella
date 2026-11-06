@@ -39,6 +39,7 @@ node tools/cover.js dist/cover_3x4.png 58 src/cover_v.html   # 渲染竖版 3:4 
 辅助工具：
 - `node tools/shot.js <目录> 12.5 50.2 …`：截取指定时刻的画面
 - `node tools/overlap.js`：每 0.2 秒采样一次，自动检查文字之间是否重叠、是否贴边
+- `node tools/fadecheck.js <开始秒> <结束秒> <x> <y> <宽> <高>`：逐帧测量画面某区域的亮度，检查淡出是否平滑（有无台阶式跳变）
 
 ## 代码结构
 

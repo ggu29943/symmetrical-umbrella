@@ -24,7 +24,8 @@ const GL = {
     if (!this.used) return;
     const y4 = this.y4, y16 = this.y16, x16 = this.x16;
     y4.setTransform(1, 0, 0, 1, 0, 0); y4.clearRect(0, 0, W / 4, H / 4); y4.filter = 'blur(2.5px)'; y4.drawImage(this.c4, 0, 0); y4.filter = 'none';
-    x16.setTransform(1, 0, 0, 1, 0, 0); x16.clearRect(0, 0, W / 16, H / 16); x16.drawImage(this.c4, 0, 0, W / 16, H / 16);
+    // 先模糊、再缩小：直接把细线从 1/4 缩到 1/16 会产生混叠，导致辉光随时间"一跳一跳"
+    x16.setTransform(1, 0, 0, 1, 0, 0); x16.clearRect(0, 0, W / 16, H / 16); x16.imageSmoothingEnabled = true; x16.imageSmoothingQuality = 'high'; x16.drawImage(this.b4, 0, 0, W / 16, H / 16);
     y16.setTransform(1, 0, 0, 1, 0, 0); y16.clearRect(0, 0, W / 16, H / 16); y16.filter = 'blur(3px)'; y16.drawImage(this.c16, 0, 0); y16.filter = 'none';
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.imageSmoothingQuality = 'high';
     ctx.globalAlpha = Math.min(1, 1.0 * k); ctx.drawImage(this.b4, 0, 0, W, H);
@@ -120,8 +121,10 @@ function drawBolt(ctx, B, st, sty = {}) {
   const width = sty.width || 2.4, core = sty.core || COL.core, glow = sty.glow || COL.blue, leadCol = sty.leadCol || [170, 150, 255];
   const gk = sty.glowK === undefined ? 1 : sty.glowK;
   if (lead <= 0 && I <= 0.002 && tip <= 0) return;
-  // 分桶：宽度等级 × 亮度等级 × 是否回击
-  const buckets = new Map();
+  // 分桶（为了批量绘制）：
+  //  · 回击段：只按"静态"的结构亮度系数分桶（主干 / 分支层级 / 粗细），整体亮度 I 连续相乘 —— 淡出时平滑、不跳档
+  //  · 先导段：按当前亮度分桶（先导本身就在逐步变化）
+  const FB = 16, buckets = new Map();
   for (const s of B.segs) {
     if (s.da >= lf) continue;
     if (onlyMain && !s.main) continue;
@@ -129,15 +132,13 @@ function drawBolt(ctx, B, st, sty = {}) {
     if (s.db > lf) { const f = (lf - s.da) / (s.db - s.da); bx = lerp(s.ax, s.bx, f); by = lerp(s.ay, s.by, f); }
     let b = lead * (s.main ? 1 : 0.7) * (0.55 + 0.45 * s.w);
     if (tip > 0 && lf - s.db < tipLen) b += tip * (1 - (lf - s.db) / tipLen);
-    let str = false;
-    if (I > 0 && (up ? s.j <= rf : s.j >= rf)) {
-      const v = I * (s.main ? 1 : bI * Math.pow(0.7, s.lvl - 1) * (0.4 + 0.6 * s.w));
-      if (v > b) { b = v; str = true; }
-    }
-    if (b < 0.01) continue;
     const wc = s.main ? 0 : s.lvl === 1 ? 1 : 2;
-    const q = Math.min(BUCK - 1, Math.floor(Math.min(b, 2) / 2 * BUCK));
-    const key = (wc * BUCK + q) * 2 + (str ? 1 : 0);
+    let key = null;
+    if (I > 0 && (up ? s.j <= rf : s.j >= rf)) {
+      const fs = s.main ? 1 : Math.pow(0.7, s.lvl - 1) * (0.4 + 0.6 * s.w);
+      if (I * (s.main ? 1 : bI) * fs > b) { const qs = s.main ? FB : Math.min(FB - 1, Math.floor(fs * FB)); key = 'S' + wc + '_' + qs; }
+    }
+    if (!key) { if (b < 0.01) continue; key = 'L' + wc + '_' + Math.min(BUCK - 1, Math.floor(Math.min(b, 2) / 2 * BUCK)); }
     let arr = buckets.get(key); if (!arr) buckets.set(key, arr = []);
     arr.push(s.ax, s.ay, bx, by);
   }
@@ -145,15 +146,16 @@ function drawBolt(ctx, B, st, sty = {}) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   gctx.lineCap = 'round';
   for (const [key, arr] of buckets) {
-    const str = key & 1, k2 = key >> 1, wc = Math.floor(k2 / BUCK), q = k2 % BUCK;
-    const b = (q + 0.5) / BUCK * 2;
+    const str = key[0] === 'S', wc = +key[1], q = +key.slice(3);
+    const b = str ? (wc === 0 ? I : I * bI) * (q >= FB ? 1 : (q + 0.5) / FB) : (q + 0.5) / BUCK * 2;
+    if (b < 0.004) continue;
     const wf = wc === 0 ? 1 : wc === 1 ? 0.55 : 0.32;
     const c = str ? mixc(glow, core, clamp(0.45 + b * 0.7)) : mixc(leadCol, [235, 235, 255], clamp(b * 0.5));
     const path = new Path2D();
     for (let i = 0; i < arr.length; i += 4) { path.moveTo(arr[i], arr[i + 1]); path.lineTo(arr[i + 2], arr[i + 3]); }
     // 辉光（低分辨率）
     gctx.strokeStyle = rgba(str ? glow : leadCol, clamp(Math.min(b, 1.3) * 0.7 * gk));
-    gctx.lineWidth = width * wf * (3 + 3 * Math.min(b, 1.4));
+    gctx.lineWidth = width * wf * 5; // 辉光宽度保持不变、只用透明度表现明暗：低分辨率下线宽连续变化会被"量化"，造成一跳一跳
     gctx.stroke(path);
     // 近处光晕
     ctx.strokeStyle = rgba(str ? glow : leadCol, clamp(b * 0.3));

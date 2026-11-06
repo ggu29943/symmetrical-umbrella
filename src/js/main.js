@@ -20,6 +20,7 @@ const E = {
     for (const s of SCENES) { s.S = { R: RNG(seed * 1000 + s.t0 * 10 | 0) }; if (s.setup) s.setup(s.S, s); }
   },
   frame(t) {
+    ditherFrame(Math.round(t * FPS));
     const ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
