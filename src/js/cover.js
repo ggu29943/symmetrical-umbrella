@@ -28,6 +28,8 @@
   const deck = makeCloud(seed + 11, D.tw, D.th, edge, { puffs: D.puffs, rMin: 0.02, rMax: 0.16, th0: 0.4, base: 0.6,
     rScale: (u, v) => lerp(C.rTop, 0.35, Math.pow(v, 0.8)), flat: (u, v) => lerp(0.8, 0.3, v), dark: [10, 13, 24], top: [70, 82, 112] });
   const ridgeFar = makeRidge(seed + 3, C.ridgeFar[0], C.ridgeFar[1], 2.4, 3), ridgeNear = makeRidge(seed + 4, C.ridgeNear[0], C.ridgeNear[1], 3.4, 3);
+  const gFar = makeGround(seed + 3, ridgeFar, { top: [30, 36, 56], mid: [16, 19, 30], bot: [10, 12, 20], rows: 5, grass: 0.7 });
+  const gNear = makeGround(seed + 4, ridgeNear, { top: [17, 20, 32], mid: [7, 8, 14], bot: [2, 3, 6], rows: 7, grass: 1.2, edgeA: 0.24 });
   // 主闪电（在云的前方劈下）与远处的第二道闪电
   const gx = C.bolt.gx, B = genBolt(seed * 7 + 1, { x0: C.bolt.x0, y0: C.bolt.y0, x1: gx, y1: ridgeY(ridgeFar, gx) + 1, step: 20, branch: 0.26, maxDepth: 4, gravAng: Math.PI / 2, grav: 0.06, branchLen: [0.1, 0.4], branchAng: [0.35, 1.1], rough: 0.36 });
   const B2 = genBolt(seed * 7 + 2, { x0: C.bolt2.x0, y0: C.bolt2.y0, x1: C.bolt2.gx, y1: ridgeY(ridgeFar, C.bolt2.gx) + 1, step: 12, branch: 0.16, maxDepth: 2, gravAng: Math.PI / 2, grav: 0.06 });
@@ -69,12 +71,9 @@
   const gg = ctx.createRadialGradient(gp.x, gp.y, 0, gp.x, gp.y, 280); gg.addColorStop(0, 'rgba(190,215,255,0.35)'); gg.addColorStop(1, 'rgba(190,215,255,0)');
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = gg; ctx.fillRect(gp.x - 280, gp.y - 280, 560, 560); ctx.restore();
   GL.flush(ctx, 0.85);
-  // 地形剪影（落点附近的山脊带一点受光）
-  drawRidge(ctx, ridgeFar, '#0a0d17');
-  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 1.4;
-  for (let i = 1; i < ridgeFar.length; i++) { const p = ridgeFar[i], a = Math.exp(-Math.abs(p[0] - gp.x) / 260); ctx.strokeStyle = `rgba(150,180,240,${0.4 * a})`; ctx.beginPath(); ctx.moveTo(ridgeFar[i - 1][0], ridgeFar[i - 1][1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); }
-  ctx.restore();
-  drawRidge(ctx, ridgeNear, '#04050a');
+  // 地面：被闪电照亮的远处大地（落点有光斑与湿地倒影）+ 近处地面
+  drawGround(ctx, gFar, { flash: 0.5, lights: [{ x: gp.x, y: gp.y + 8, r: 440, i: 0.5 }], refl: [{ x: gp.x, y: gp.y + 2, i: 0.6, len: 70 }] });
+  drawGround(ctx, gNear, { flash: 0.3 });
   if (!C.darkFirst) darken();
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   // 暗角与颗粒（与正片一致）

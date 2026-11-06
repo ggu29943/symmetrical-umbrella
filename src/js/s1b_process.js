@@ -8,7 +8,7 @@
   scene({
     name: 'process', t0: D.t0, dur: D.dur, fi: D.fi,
     setup(S, sc) {
-      S.ridge = makeRidge(SEED + 41, 905, 34, 2.0, 3);
+      S.ridge = makeRidge(SEED + 41, 905, 34, 2.0, 3); S.G = makeGround(SEED + 41, S.ridge);
       S.tower = makeTower(1240, ridgeY(S.ridge, 1240) + 4, 250);
       S.tree = makeTree(SEED + 42, 700, ridgeY(S.ridge, 700) + 4, 210);
       S.trees2 = [380, 520, 1560, 1760].map((x, i) => makeTree(SEED + 50 + i, x, ridgeY(S.ridge, x) + 4, 90 + i * 17));
@@ -88,7 +88,7 @@
       for (const dh of extra) drawBolt(ctx, B, { lf: Math.min(dh, B.Dmain), lead: 0.65, onlyMain: true }, { width: 3.0, leadCol: [200, 200, 255] });
       if (head) { glowDot(ctx, head[0], head[1], 5, [255, 255, 255], 1, 2.2); }
       // 地面
-      drawRidge(ctx, S.ridge, rgba(mixc([6, 8, 13], [26, 30, 44], clamp(light * 0.5))));
+      drawGround(ctx, S.G, { flash: light * 0.55, lights: [{ x: 1240, y: ridgeY(S.ridge, 1240) + 6, r: 380, i: light * 0.32 }] });
       ctx.fillStyle = rgba(mixc([6, 8, 13], [22, 26, 38], clamp(light * 0.5)));
       ctx.fill(S.tree.path); S.trees2.forEach(tr => ctx.fill(tr.path)); ctx.fill(S.tower.path);
       // 时间轴（阶段 C）
@@ -127,7 +127,7 @@
       const o = sc.t0;
       S.ch = genBolt(SEED * 23 + 1, { x0: 560, y0: 70, x1: 520, y1: 905, step: 22, branch: 0.06, maxDepth: 1, gravAng: Math.PI / 2, grav: 0.06 });
       S.src = [0.08, 0.25, 0.42, 0.6, 0.78, 0.95].map(f => S.ch.at(f * S.ch.Dmain));
-      S.L = [1480, 905];
+      S.L = [1480, 905]; S.G = makeGround(SEED + 61, makeRidge(SEED + 61, 905, 6, 2, 2), { rows: 9 });
       hit(o + 0.9, 0.7, 'boom');
       S.src.forEach((p, i) => { const d = Math.hypot(p[0] - S.L[0], p[1] - S.L[1]); hit(o + SPLIT + 0.25 + d / 420, 0.35 + 0.1 * (i % 3), 'rumble'); });
       // A
@@ -176,9 +176,8 @@
         ctx.save(); ctx.globalAlpha = aB;
         const lb = lt - SPLIT;
         camera(ctx, 0, 0, 1.0);
-        ctx.fillStyle = '#05070c'; ctx.fillRect(-100, 905, W + 200, 300);
-        ctx.strokeStyle = 'rgba(140,170,220,0.25)'; ctx.beginPath(); ctx.moveTo(-100, 905); ctx.lineTo(W + 100, 905); ctx.stroke();
         const I = 0.22 + 1.4 * pulse(lb, 0.25, 0.08);
+        drawGround(ctx, S.G, { flash: I * 0.3, lights: [{ x: 520, y: 912, r: 300, i: I * 0.3 }] });
         drawBolt(ctx, S.ch, { I, rf: -1, bI: 0.5 }, { width: 2.6 });
         // 各段发出的声波
         S.src.forEach((p, i) => {

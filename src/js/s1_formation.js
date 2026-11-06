@@ -13,6 +13,8 @@ scene({
   name: 'open', t0: TL.open.t0, dur: TL.open.dur, fi: 1.4,
   setup(S, sc) {
     S.far = makeRidge(SEED + 3, 900, 70, 2.2); S.near = makeRidge(SEED + 4, 1000, 110, 3.5);
+    S.gFar = makeGround(SEED + 3, S.far, { top: [30, 36, 56], mid: [17, 20, 32], bot: [12, 14, 24], rows: 6, tex: 0.22, grass: 0.7, edgeA: 0.35 });
+    S.gNear = makeGround(SEED + 4, S.near, { top: [18, 21, 34], mid: [8, 10, 16], bot: [2, 3, 6], rows: 9, tex: 0.32, grass: 1.3, edgeA: 0.22 });
     S.rain = makeRain(SEED + 5, 1100, { alpha: 0.2 });
     const gx = 905, gy = ridgeY(S.far, 905) + 1;
     S.bolt = genBolt(SEED * 7 + 1, { x0: 1060, y0: 300, x1: gx, y1: gy, step: 24, branch: 0.14, gravAng: Math.PI / 2, grav: 0.05, maxDepth: 3, branchLen: [0.12, 0.4] });
@@ -41,8 +43,9 @@ scene({
     drawCloud(ctx, deckTex(), -120, -80, 2160, 760, lights, { amb: 0.04 + L * 0.12 });
     drawBolt(ctx, S.bolt, S.fl.state(lt), { width: 3.2 });
     GL.flush(ctx);
-    drawRidge(ctx, S.far, rgba(mixc([10, 12, 20], [40, 48, 70], clamp(L * 0.5))));
-    drawRidge(ctx, S.near, rgba(mixc([4, 5, 9], [16, 20, 30], clamp(L * 0.4))));
+    const gy0 = ridgeY(S.far, 905);
+    drawGround(ctx, S.gFar, { flash: L * 0.7, lights: [{ x: 905, y: gy0 + 8, r: 340, i: L * 0.55 }], refl: [{ x: 905, y: gy0 + 2, i: L * 0.7, len: 110 }] });
+    drawGround(ctx, S.gNear, { flash: L * 0.45 });
     drawRain(ctx, S.rain, t, clamp(L * 0.6), 1);
     // 片名段落：压暗背景
     const dk = env(lt, 7.6, 20, 0.9, 0) * 0.55;
@@ -198,7 +201,7 @@ section('intro', 0, TL.ch1.t0 + TL.ch1.dur, 'dark');
     name: 'induct', t0: D.t0, dur: D.dur, fi: D.fi,
     setup(S, sc) {
       const R = RNG(SEED * 17 + 5);
-      S.ridge = makeRidge(SEED + 21, 900, 40, 2.4, 3);
+      S.ridge = makeRidge(SEED + 21, 900, 40, 2.4, 3); S.G = makeGround(SEED + 21, S.ridge);
       S.trees = [760, 1180, 1590].map((x, i) => makeTree(SEED + 30 + i, x, ridgeY(S.ridge, x) + 4, R.range(120, 170)));
       S.tower = makeTower(1390, ridgeY(S.ridge, 1390) + 4, 190);
       S.minus = []; for (let k = 0; k < 46; k++) S.minus.push({ x: R.range(560, 1880), y: R.range(215, 300), ph: R() * 9 });
@@ -241,7 +244,7 @@ section('intro', 0, TL.ch1.t0 + TL.ch1.dur, 'dark');
       // 云底负电荷
       for (const m of S.minus) { const x = ((m.x + dr - 560) % 1320 + 1320) % 1320 + 560; chargeSign(ctx, x + Math.sin(lt + m.ph) * 3, m.y, 13, false, 0.9 * (1 - smooth((lt - 13.4) / 0.6))); }
       // 地面
-      drawRidge(ctx, S.ridge, '#06080d');
+      drawGround(ctx, S.G, { flash: fl * 0.6 });
       ctx.save(); ctx.globalCompositeOperation = 'source-over';
       for (const tr of S.trees) { ctx.fillStyle = '#06080d'; ctx.fill(tr.path); }
       ctx.fillStyle = '#080a10'; ctx.fill(S.tower.path); ctx.restore();

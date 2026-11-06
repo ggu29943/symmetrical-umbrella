@@ -57,13 +57,13 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
     setup(S, sc) {
       const o = sc.t0, R = RNG(SEED * 29);
       S.cl = TEX.get('storm', () => makeCloud(SEED + 81, 1300, 620, stormShape, { puffs: 1500, rMin: 0.015, rMax: 0.09, flat: (u, v) => v < 0.3 ? 0.42 : 0.95, th0: 0.45, dark: [10, 13, 26], top: [58, 70, 102] }));
-      S.ridge = makeRidge(SEED + 82, 945, 40, 3, 3);
+      S.ridge = makeRidge(SEED + 82, 945, 40, 3, 3, -160, W + 480); S.G = makeGround(SEED + 82, S.ridge);
       S.rain = makeRain(SEED + 83, 700, { alpha: 0.2 });
       S.n1 = genBolt(SEED * 29 + 1, { x0: 560, y0: 640, x1: 515, y1: ridgeY(S.ridge, 515) + 2, step: 20, branch: 0.2, gravAng: Math.PI / 2, grav: 0.06, maxDepth: 3, branchLen: [0.12, 0.42] });
       S.f1 = flashOf(S.n1, { t0: 1.0, lead: 0.4, steps: 26, strokes: [0, 0.07, 0.15, 0.26], peaks: [1.7, 1.25, 1.05, 0.85] });
       S.n2 = genBolt(SEED * 29 + 2, { x0: 690, y0: 650, x1: 770, y1: ridgeY(S.ridge, 770) + 2, step: 20, branch: 0.17, gravAng: Math.PI / 2, grav: 0.06, maxDepth: 2 });
       S.f2 = flashOf(S.n2, { t0: 3.25, lead: 0.3, steps: 20, strokes: [0, 0.09, 0.17], peaks: [1.4, 1.0, 0.8] });
-      S.p1 = genBolt(SEED * 29 + 3, { x0: 1660, y0: 150, x1: 2160, y1: ridgeY(S.ridge, 2160 % W) + 2, angle: 0.05, pull: 0.07, step: 26, branch: 0.05, wander: 0.3, maxDepth: 2, gravAng: Math.PI / 2, grav: 0.02 });
+      S.p1 = genBolt(SEED * 29 + 3, { x0: 1660, y0: 150, x1: 2160, y1: ridgeY(S.ridge, 2160) + 2, angle: 0.05, pull: 0.07, step: 26, branch: 0.05, wander: 0.3, maxDepth: 2, gravAng: Math.PI / 2, grav: 0.02 });
       S.fp = flashOf(S.p1, { t0: 6.55, lead: 0.42, stepped: false, strokes: [0], peaks: [2.3], tau: 0.06, cont: { dur: 0.55, lvl: 0.6 }, bI: 0.35 });
       hit(o + S.f1.tc, 0.85, 'strike'); hit(o + S.f2.tc, 0.6, 'strike'); hit(o + S.fp.tc, 1.15, 'strike');
       S.minus = []; S.plus = [];
@@ -102,7 +102,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       drawBolt(ctx, S.p1, sp, { width: 3.4, glow: [150, 175, 255] });
       // 正闪落点：草地起火
       const fs = lt - S.fp.tc - 0.3;
-      const gp = S.p1.main[S.p1.main.length - 1];
+      const gpo = S.p1.main[S.p1.main.length - 1], gp = [gpo.x, gpo.y];
       if (fs > 0) {
         const fa = smooth(fs / 1.2) * (1 - smooth((lt - 12.1) / 0.6));
         for (let k = 0; k < 14; k++) {
@@ -112,9 +112,8 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
         }
       }
       GL.flush(ctx);
-      drawRidge(ctx, S.ridge.map(p => [p[0], p[1]]), rgba(mixc([5, 6, 11], [22, 26, 38], clamp(Ls * 0.4))));
-      // 远处的地面延伸（摄像机右移后可见）
-      ctx.fillStyle = rgba(mixc([5, 6, 11], [22, 26, 38], clamp(Ls * 0.4))); ctx.fillRect(W - 10, ridgeY(S.ridge, W) - 2, 900, 200);
+      const fire = fs > 0 ? smooth(fs / 1.2) * (1 - smooth((lt - 12.1) / 0.6)) : 0;
+      drawGround(ctx, S.G, { flash: Ls * 0.55, lights: [{ x: 515, y: ridgeY(S.ridge, 515) + 6, r: 320, i: (L1 + L2) * 0.4 }, { x: gp[0], y: gp[1] + 6, r: 420, i: Lp * 0.5 }, { x: gp[0], y: gp[1] + 4, r: 170, i: fire * 0.45, c: [255, 140, 60] }] });
       if (Ls > 0.3) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(200,215,255,${clamp((Ls - 0.3) * 0.1)})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     },
   });
@@ -128,6 +127,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
     setup(S, sc) {
       const o = sc.t0;
       S.c1 = cumTex(1); S.c2 = cumTex(2); S.c3 = cumTex(3); S.c4 = cumTex(4);
+      S.G = makeGround(SEED + 95, makeRidge(SEED + 95, 1002, 22, 3, 2), { rows: 5, grass: 0.8 });
       S.ic = genBolt(SEED * 31 + 1, { x0: 170, y0: 480, angle: 0.04, length: 420, step: 16, wander: 0.5, pull: 0.25, branch: 0.26, maxDepth: 3, branchAng: [0.5, 1.3], branchLen: [0.15, 0.45], rough: 0.32 });
       S.fic = flashOf(S.ic, { t0: 0.9, lead: 0.55, stepped: false, strokes: [0, 0.16, 0.3], peaks: [1.0, 0.85, 0.6], tau: 0.08, bI: 0.9 });
       S.cc = genBolt(SEED * 31 + 2, { x0: 965, y0: 440, x1: 1150, y1: 410, angle: -0.9, pull: 0.1, step: 13, branch: 0.1, maxDepth: 2, wander: 0.38 });
@@ -145,7 +145,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       camera(ctx, -lt * 6, 0, 1.0 + lt * 0.003);
       sky(ctx, [5, 7, 17], [16, 20, 36]);
       const Li = S.fic.light(lt), Lc = S.fcc.light(lt), La = S.fca.light(lt);
-      ctx.fillStyle = '#04050a'; ctx.fillRect(-200, 1000, W + 400, 200);
+      drawGround(ctx, S.G, { flash: (Li * 0.3 + Lc + La) * 0.35 });
       // 云内闪：通道大部分被云遮住，整朵云从内部亮起
       drawBolt(ctx, S.ic, S.fic.state(lt), { width: 2.2 });
       drawCloud(ctx, S.c1, 20, 190, 690, 600, boltLights(S.ic, 6, 280, Li * 0.26), { amb: 0.04 });
@@ -170,7 +170,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
     name: 'look', t0: D.t0, dur: D.dur, fi: D.fi,
     setup(S, sc) {
       const o = sc.t0;
-      S.ridge = makeRidge(SEED + 91, 905, 50, 2.6, 3);
+      S.ridge = makeRidge(SEED + 91, 905, 50, 2.6, 3); S.G = makeGround(SEED + 91, S.ridge);
       S.sheet = [[0.7, 600, 330, 1.0], [1.32, 1300, 280, 0.8], [1.46, 1100, 420, 1.1], [2.55, 450, 260, 0.7], [3.35, 1500, 380, 0.9]];
       S.sheet.forEach(f => hit(o + f[0], f[3] * 0.45, 'soft'));
       S.fork = genBolt(SEED * 37 + 1, { x0: 1150, y0: -30, x1: 960, y1: 905, step: 19, branch: 0.3, maxDepth: 4, gravAng: Math.PI / 2, grav: 0.07, branchLen: [0.1, 0.38], branchAng: [0.35, 1.1], rough: 0.36 });
@@ -197,7 +197,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
         const Ls = L.reduce((a, l) => a + l.i, 0);
         c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = rgba([90, 110, 170], clamp(Ls * 0.12)); c.fillRect(-W, -H, W * 3, H * 3); c.restore();
         drawCloud(c, deckTex(), -150, -60, 2220, 900, L, { amb: 0.04 });
-        drawRidge(c, S.ridge, rgba(mixc([5, 6, 10], [24, 28, 40], clamp(Ls * 0.4))));
+        drawGround(c, S.G, { flash: Ls * 0.5 });
       });
       subscene(ctx, aB, c => {
         camera(c, 0, 0, 1.0 + (lt - A1) * 0.008);
@@ -208,7 +208,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
         if (lt > S.ff.tc + 0.2) st.I = Math.max(st.I, 0.5 * (1 - smooth((lt - S.ff.tc - 2.4) / 1.2)));
         drawBolt(c, S.fork, st, { width: 2.6 });
         GL.flush(c);
-        drawRidge(c, S.ridge, rgba(mixc([4, 5, 9], [20, 24, 36], clamp(L * 0.4))));
+        drawGround(c, S.G, { flash: L * 0.55, lights: [{ x: 960, y: ridgeY(S.ridge, 960) + 6, r: 360, i: L * 0.4 }], refl: [{ x: 960, y: ridgeY(S.ridge, 960) + 2, i: L * 0.6, len: 120 }] });
       });
       subscene(ctx, aC, c => {
         camera(c, 0, 0, 1.03 - (lt - B1) * 0.004);
@@ -232,7 +232,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
           }
         }
         GL.flush(c);
-        drawRidge(c, S.ridge, rgba(mixc([4, 5, 9], [20, 24, 36], clamp(L * 0.4))));
+        drawGround(c, S.G, { flash: L * 0.55, lights: [{ x: 1080, y: ridgeY(S.ridge, 1080) + 6, r: 360, i: L * 0.4 }], refl: [{ x: 1080, y: ridgeY(S.ridge, 1080) + 2, i: L * 0.6, len: 120 }] });
       });
     },
   });
@@ -246,11 +246,11 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
     setup(S, sc) {
       const o = sc.t0, R = RNG(SEED * 41);
       S.stars = makeStars(SEED + 101, 260, 760);
-      S.plain = makeRidge(SEED + 102, 830, 14, 3, 2);
+      S.plain = makeRidge(SEED + 102, 830, 14, 3, 2); S.Gp = makeGround(SEED + 102, S.plain, { top: [24, 29, 46], mid: [10, 12, 20], bot: [3, 4, 8], rows: 12, grass: 0.6, edgeA: 0.25 });
       S.lights = []; for (let k = 0; k < 26; k++) S.lights.push([R.range(80, 1100), R.range(-2, 3), R.range(0.3, 1)]);
       S.heat = [[0.9, 0.9], [1.6, 0.6], [1.74, 0.8], [2.85, 0.7], [3.9, 0.9]];
       S.heat.forEach(([tt, k]) => hit(o + tt, k * 0.25, 'silent'));
-      S.hills = makeRidge(SEED + 103, 820, 220, 2.2, 4);
+      S.hills = makeRidge(SEED + 103, 820, 220, 2.2, 4); S.Gh = makeGround(SEED + 103, S.hills, { top: [44, 31, 28], mid: [19, 13, 13], bot: [6, 4, 5], edge: [210, 150, 120], edgeA: 0.22, line: [190, 130, 110], lineA: 0.07, rows: 9 });
       S.dcl = TEX.get('drycl', () => makeCloud(SEED + 104, 1440, 380, edgeShape(0.75, 0.25, 0.15, SEED + 105), { puffs: 1100, rMin: 0.03, rMax: 0.2, flat: () => 0.55, th0: 0.4, dark: [16, 12, 16], top: [70, 56, 60], lit: [255, 225, 210] }));
       S.virga = []; for (let k = 0; k < 90; k++) S.virga.push([R.range(300, 1750), R.range(0, 1), R.range(120, 260)]);
       const gx = 1260; S.gp = [gx, ridgeY(S.hills, gx) + 3];
@@ -275,7 +275,7 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
         drawCloud(c, cumTex(2), 1250, 650, 300, 260, [{ x: 1400, y: 770, r: 260, i: I * 0.75, c: [255, 240, 235] }], { amb: 0.02, alpha: 0.95 });
         drawCloud(c, cumTex(3), 1440, 690, 230, 200, [{ x: 1550, y: 790, r: 220, i: I * 0.5, c: [255, 235, 230] }], { amb: 0.02 });
         const hg = c.createRadialGradient(1450, 830, 0, 1450, 830, 500); hg.addColorStop(0, rgba([140, 150, 220], clamp(I * 0.25))); hg.addColorStop(1, 'rgba(140,150,220,0)'); c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = hg; c.fillRect(900, 400, 1100, 500); c.restore();
-        drawRidge(c, S.plain, '#05060c');
+        drawGround(c, S.Gp, { flash: I * 0.12, lights: [{ x: 1450, y: 840, r: 520, i: I * 0.16 }] });
         for (const [x, dy, b] of S.lights) glowDot(c, x, ridgeY(S.plain, x) + dy, 1.3, [255, 210, 150], b * 0.8, 0.5);
         // 距离示意
         const da = smooth((lt - 1.2) / 0.8) * (1 - smooth((lt - 4.4) / 0.4));
@@ -325,7 +325,8 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
         }
         GL.flush(c);
         const hc = rgba(mixc([10, 7, 7], [40, 30, 32], clamp(L * 0.4)));
-        drawRidge(c, S.hills, hc);
+        const fA = lt > S.fd.tc + 0.15 ? smooth((lt - S.fd.tc - 0.15) / 1.4) : 0;
+        drawGround(c, S.Gh, { flash: L * 0.5, flashC: [170, 140, 150], lights: [{ x: S.gp[0], y: S.gp[1] + 10, r: 300, i: L * 0.4 }, { x: S.gp[0], y: S.gp[1] + 6, r: 230, i: fA * 0.5, c: [255, 130, 50] }] });
         c.fillStyle = hc; S.trees.forEach(tr => c.fill(tr.path));
       });
     },

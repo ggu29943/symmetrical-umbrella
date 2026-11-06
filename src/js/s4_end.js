@@ -9,7 +9,7 @@ chapter('ch3', 3, '雷暴中的你', '估算距离 · 安全常识', 303);
     name: 'dist', t0: D.t0, dur: D.dur, fi: D.fi,
     setup(S, sc) {
       const o = sc.t0;
-      S.ridge = makeRidge(SEED + 150, 770, 26, 2.5, 3);
+      S.ridge = makeRidge(SEED + 150, 770, 26, 2.5, 3); S.G = makeGround(SEED + 150, S.ridge, { rows: 12 });
       S.stars = makeStars(SEED + 151, 120, 600);
       S.b = genBolt(SEED * 53 + 1, { x0: 1560, y0: 470, x1: 1530, y1: ridgeY(S.ridge, 1530) + 1, step: 12, branch: 0.16, maxDepth: 2, gravAng: Math.PI / 2, grav: 0.06 });
       S.f = flashOf(S.b, { t0: F - 0.15, lead: 0.15, stepped: false, strokes: [0, 0.07, 0.15], peaks: [1.7, 1.2, 0.9] });
@@ -30,7 +30,7 @@ chapter('ch3', 3, '雷暴中的你', '估算距离 · 安全常识', 303);
       drawCloud(ctx, cumTex(4), 1360, 300, 420, 360, [{ x: 1560, y: 470, r: 360, i: L * 0.7 }], { amb: 0.03 });
       drawBolt(ctx, S.b, S.f.state(lt), { width: 2.2 });
       GL.flush(ctx);
-      drawRidge(ctx, S.ridge, '#05060b');
+      drawGround(ctx, S.G, { flash: L * 0.3, lights: [{ x: 1530, y: 776, r: 300, i: L * 0.35 }] });
       // 声波从闪电处传向听者
       const p = clamp((lt - S.f.tc) / (ARR - S.f.tc)), r = p * Math.hypot(1530 - S.L[0], 770 - S.L[1]);
       if (lt > S.f.tc && lt < ARR + 0.6) {

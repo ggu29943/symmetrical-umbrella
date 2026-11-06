@@ -353,9 +353,74 @@ function drawRain(ctx, rain, t, flash = 0, k = 1) {
 }
 
 // ── 地形剪影 ──
-function makeRidge(seed, y0, amp, freq = 3, oct = 4) {
-  const pts = []; for (let x = -40; x <= W + 40; x += 6) pts.push([x, y0 - (fbm(x / W * freq, 0.5, oct, seed) - 0.35) * amp]);
+function makeRidge(seed, y0, amp, freq = 3, oct = 4, xa = -40, xb = W + 40) {
+  const pts = []; for (let x = xa; x <= xb; x += 6) pts.push([x, y0 - (fbm(x / W * freq, 0.5, oct, seed) - 0.35) * amp]);
   return pts;
+}
+// ── 地面：让"黑色剪影"变成看得出的大地 ──
+// 近地平线处略亮、越近越暗（大气透视）；随距离压缩的地表起伏纹理；层层田野轮廓线；
+// 地平线上细碎的草丛 / 灌木边缘；一条微弱的天光反光线勾出地平线。
+function makeGround(seed, pts, o = {}) {
+  const O = Object.assign({ top: [32, 38, 58], mid: [15, 18, 29], bot: [5, 6, 11], tex: 0.3, rows: 10, grass: 1, edge: [120, 140, 185], edgeA: 0.4, line: [125, 145, 195], lineA: 0.1, depth: null }, o);
+  const x0 = pts[0][0], x1 = pts[pts.length - 1][0], ys = pts.map(p => p[1]);
+  const yMin = Math.min(...ys) - 10, yAvg = ys.reduce((a, b) => a + b, 0) / ys.length, yB = O.depth || H + 40;
+  const w = Math.ceil(x1 - x0), h = Math.ceil(yB - yMin);
+  const c = makeCanvas(w, h), g = c.getContext('2d');
+  g.translate(-x0, -yMin);
+  const path = new Path2D(); path.moveTo(x0, yB); for (const p of pts) path.lineTo(p[0], p[1]); path.lineTo(x1, yB); path.closePath();
+  const gr = g.createLinearGradient(0, yAvg - 20, 0, yB);
+  gr.addColorStop(0, rgba(O.top)); gr.addColorStop(clamp(90 / (yB - yAvg)), rgba(mixc(O.top, O.mid, 0.6))); gr.addColorStop(0.45, rgba(O.mid)); gr.addColorStop(1, rgba(O.bot));
+  g.fillStyle = gr; g.fill(path);
+  // 地表起伏纹理：越近地平线越扁（透视压缩）
+  const id = g.getImageData(0, 0, w, h), D = id.data, ry = x => { const i = clamp(Math.round((x - x0) / 6), 0, pts.length - 1); return pts[i][1]; };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const j = (y * w + x) * 4; if (D[j + 3] === 0) continue;
+    const wy = y + yMin, wx = x + x0, top = ry(wx), dep = clamp((wy - top) / (yB - top));
+    const sy = 3 + dep * dep * 60, sx = 40 + dep * 260;
+    const n = fbm(wx / sx, wy / sy, 3, seed) - 0.5, n2 = fbm(wx / (sx * 0.35), wy / (sy * 0.5), 2, seed + 7) - 0.5;
+    const k = 1 + (n * 2 * O.tex + n2 * O.tex * 0.6) * (0.6 + 0.4 * (1 - dep));
+    D[j] = clamp(D[j] * k, 0, 255); D[j + 1] = clamp(D[j + 1] * k, 0, 255); D[j + 2] = clamp(D[j + 2] * k, 0, 255);
+  }
+  g.putImageData(id, 0, 0);
+  // 田野 / 地形轮廓线（透视间距：近地平线处密，近处疏）
+  g.save(); g.clip(path); g.lineJoin = 'round';
+  for (let k = 1; k <= O.rows; k++) {
+    const t = k / (O.rows + 1), d = Math.pow(t, 1.9) * (yB - yAvg) * 0.9;
+    g.strokeStyle = rgba(O.line, O.lineA * (1 - t * 0.55)); g.lineWidth = 0.8 + t * 1.6; g.beginPath();
+    pts.forEach((p, i) => { const y = p[1] + d + (fbm(p[0] / 260, k * 3.1, 2, seed + 11) - 0.5) * d * 0.5; i ? g.lineTo(p[0], y) : g.moveTo(p[0], y); });
+    g.stroke();
+  }
+  g.restore();
+  // 地平线上的草丛 / 灌木细碎边缘
+  if (O.grass > 0) {
+    g.fillStyle = rgba(O.top); g.strokeStyle = rgba(mixc(O.top, [0, 0, 0], 0.15)); g.lineWidth = 1;
+    for (let x = x0; x < x1; x += 2) {
+      const hsh = hash1(Math.round(x), seed), y = ry(x) + 1;
+      if (hsh < 0.18 * O.grass) { const r = 2 + hash1(Math.round(x), seed + 3) * 6 * O.grass; g.beginPath(); g.arc(x, y - r * 0.5, r, Math.PI, 0); g.fill(); }
+      const bh = (1 + hash1(Math.round(x), seed + 5) * 5) * O.grass; g.beginPath(); g.moveTo(x, y + 1); g.lineTo(x + (hash1(Math.round(x), seed + 9) - 0.5) * 3, y - bh); g.stroke();
+    }
+  }
+  // 地平线反光线
+  g.strokeStyle = rgba(O.edge, O.edgeA); g.lineWidth = 1.2; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1] + 0.5) : g.moveTo(p[0], p[1] + 0.5)); g.stroke();
+  return { c, x0, yMin, path, pts, O };
+}
+// 绘制地面；flash：整体被闪光照亮的程度；lights：局部光斑 [{x,y,r,i,c}]；refl：湿地面上闪电的倒影 [{x,i,w}]
+function drawGround(ctx, G, o = {}) {
+  ctx.drawImage(G.c, G.x0, G.yMin);
+  const fl = o.flash || 0, L = (o.lights || []).filter(l => l.i > 0.004), R = (o.refl || []).filter(r => r.i > 0.004);
+  if (fl <= 0.003 && !L.length && !R.length) return;
+  ctx.save(); ctx.clip(G.path); ctx.globalCompositeOperation = 'lighter';
+  if (fl > 0.003) { const c = o.flashC || [120, 140, 200]; const yt = G.yMin + 10; const gr = ctx.createLinearGradient(0, yt, 0, H + 40); gr.addColorStop(0, rgba(c, clamp(fl * 0.32))); gr.addColorStop(0.5, rgba(c, clamp(fl * 0.12))); gr.addColorStop(1, rgba(c, 0)); ctx.fillStyle = gr; ctx.fillRect(G.x0, yt - 20, G.c.width, H + 80 - yt); }
+  for (const l of L) { // 地面上的光斑：把圆形渐变整体压扁成椭圆（透视），边缘完全柔和
+    const c = l.c || [190, 210, 255]; ctx.save(); ctx.translate(l.x, l.y); ctx.scale(1, l.flat || 0.35);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, l.r); g.addColorStop(0, rgba(c, clamp(l.i))); g.addColorStop(0.4, rgba(c, clamp(l.i * 0.35))); g.addColorStop(1, rgba(c, 0));
+    ctx.fillStyle = g; ctx.fillRect(-l.r, -l.r, l.r * 2, l.r * 2); ctx.restore(); }
+  for (const r of R) {
+    const yt = (r.y || G.yMin + 12), w = r.w || 26, c = r.c || [200, 220, 255];
+    const g = ctx.createLinearGradient(0, yt, 0, yt + (r.len || 180)); g.addColorStop(0, rgba(c, clamp(r.i * 0.55))); g.addColorStop(1, rgba(c, 0));
+    ctx.fillStyle = g; ctx.filter = 'blur(5px)'; ctx.fillRect(r.x - w / 2, yt, w, r.len || 180); ctx.filter = 'none';
+  }
+  ctx.restore();
 }
 function drawRidge(ctx, pts, col, bottom = H + 10) {
   ctx.beginPath(); ctx.moveTo(pts[0][0], bottom); for (const p of pts) ctx.lineTo(p[0], p[1]); ctx.lineTo(pts[pts.length - 1][0], bottom); ctx.closePath(); ctx.fillStyle = col; ctx.fill();

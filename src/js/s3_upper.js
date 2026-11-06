@@ -111,6 +111,7 @@
       const o = sc.t0;
       S.rain = makeRain(SEED + 140, 420, { alpha: 0.1, speed: 1200 });
       S.tree = makeTree(SEED + 141, 1560, 770, 260);
+      S.G = makeGround(SEED + 142, makeRidge(SEED + 142, 772, 6, 2, 2), { top: [24, 28, 44], mid: [10, 12, 20], bot: [3, 4, 8], rows: 10, grass: 0.9 });
       S.posts = []; for (let k = 0; k < 12; k++) { const z = k / 11; S.posts.push([lerp(150, 1300, Math.pow(z, 0.8)), lerp(830, 760, z), lerp(70, 22, z)]); }
       S.pos = lt => { const p = clamp((lt - B0) / (B1 - B0)); return [lerp(560, 1360, p) + Math.sin(lt * 0.9) * 30, 640 + Math.sin(lt * 1.3) * 22 + (noise1(lt * 1.5, 4) - 0.5) * 26]; };
       hit(o + B0, 0.4, 'shimmer'); hit(o + B1, 0.45, 'pop');
@@ -131,12 +132,12 @@
       // 远处云底的微弱闪光
       const far = pulse(lt, 2.4, 0.08) * 0.4 + pulse(lt, 6.8, 0.08) * 0.3;
       if (far > 0.01) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rgba([80, 100, 160], far * 0.3); ctx.fillRect(-W, -H, W * 3, 900); ctx.restore(); }
-      // 湿地面
-      const gg = ctx.createLinearGradient(0, 770, 0, H); gg.addColorStop(0, '#0b0d16'); gg.addColorStop(1, '#040509'); ctx.fillStyle = gg; ctx.fillRect(-100, 770, W + 200, 400);
       // 光球
       const vis = smooth((lt - B0) / 0.5) * (lt < B1 ? 1 : 0);
       const [bx, by] = S.pos(lt);
       const fk = 0.85 + 0.15 * noise1(lt * 14, 2);
+      // 湿地面（被光球照亮）
+      drawGround(ctx, S.G, { flash: far * 0.4, lights: [{ x: bx, y: 800 + (by - 600) * 0.4, r: 420, i: 0.22 * vis * fk, c: [255, 160, 80], flat: 0.3 }] });
       // 地面倒影
       if (vis > 0) {
         const ry = 1540 - by, rg = ctx.createLinearGradient(0, 780, 0, ry + 140);
