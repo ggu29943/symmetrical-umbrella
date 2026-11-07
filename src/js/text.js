@@ -51,8 +51,9 @@ const TX = {
         if (ch === '\n') { inner.appendChild(document.createElement('br')); line++; col = 0; return; }
         const s = document.createElement('span');
         s.textContent = ch; s.style.display = 'inline-block'; s.style.whiteSpace = 'pre';
+        if (it.mergeFrom !== undefined && it.spans.length > it.mergeFrom) { const L = it.spans[it.spans.length - 1]; L.ch += ch; L.el.textContent = L.ch; return; }   // 从 mergeFrom 起合成一个整体（如英文名：整词排版、字距由字体处理）
         if (it.charCss) s.style.cssText += ';' + it.charCss(ch, it.spans.length);
-        inner.appendChild(s); it.spans.push({ el: s, ch, line, col: col++ });
+        inner.appendChild(s); it.spans.push({ el: s, ch, line, col: col++, alt: it.mergeFrom !== undefined && it.spans.length === it.mergeFrom });
       });
       const n = it.spans.length;
       // 入场顺序
@@ -65,7 +66,8 @@ const TX = {
       if (it.kmapOut) it.spans.forEach((s, i) => s.ko = it.kmapOut(i, s.k, n));   // 退场可用另一套节奏
       it.kMax = Math.max(0, ...it.spans.map(s => s.k));
       // 关键词着色：hl: [['正电', '#ffc46e'], ...]
-      if (it.hl) { const flat = it.spans.map(s => s.ch).join(''); for (const [w, c] of it.hl) { let k = flat.indexOf(w); while (k >= 0) { for (let j = k; j < k + Array.from(w).length; j++) it.spans[j].hlc = c; k = flat.indexOf(w, k + 1); } } }
+      if (it.hl) { const own = []; it.spans.forEach((s, j) => Array.from(s.ch).forEach(() => own.push(j))); const flat = it.spans.map(s => s.ch).join(''), fa = Array.from(flat);
+        for (const [w, c] of it.hl) { const wl = Array.from(w).length; for (let k = 0; k + wl <= fa.length; k++) if (fa.slice(k, k + wl).join('') === w) for (let j = k; j < k + wl; j++) it.spans[own[j]].hlc = c; } }
       if (it.ax === 0.5 && it.tracking) inner.style.paddingLeft = it.tracking + 'em';
     }
     if (it.lead) {
@@ -127,7 +129,7 @@ const TX = {
     let o = 1, x = 0, y = 0, z = 0, sc = 1, b = 0, g = 1, r = 0, c = null;
     // —— 入场 ——
     const e = Ease.outExpo(pin), e3 = Ease.outCubic(pin);
-    switch (it.inA) {
+    switch (s.alt && it.altIn ? it.altIn : it.inA) {
       case 'rise': o = smooth(pin * 1.4); y = (1 - e3) * S * 0.55; b = (1 - e) * 10; break;
       case 'drop': o = smooth(pin * 1.4); y = -(1 - e3) * S * 0.6; b = (1 - e) * 8; break;
       case 'focus': o = smooth(pin * 1.6); sc = 1 + (1 - e) * 0.5; b = (1 - e) * 22; z = (1 - e) * 120; break;
@@ -146,7 +148,7 @@ const TX = {
     // —— 退场 ——
     if (pout > 0) {
       const q = Ease.inCubic(pout), q2 = Ease.inOutCubic(pout);
-      switch (it.outA) {
+      switch (s.alt && it.altOut ? it.altOut : it.outA) {
         case 'drift': o *= 1 - smooth(pout * 1.15); y -= q2 * S * 0.45; b += q * 10; break;
         case 'sink': o *= 1 - smooth(pout * 1.15); y += q2 * S * 0.4; b += q * 10; break;
         case 'blur': o *= 1 - smooth(pout); b += q * 18; sc *= 1 + q * 0.12; break;

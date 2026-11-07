@@ -32,10 +32,11 @@ function biName(o) {
   if (k < 0) return o;
   const en = chars.slice(k + 1).join(''), g = o.glow || ST.term.glow;
   const col = o.enColor || `rgb(${mixc(g, [255, 255, 255], 0.5).map(v => v | 0).join(',')})`;
+  // 英文整词作为一个整体（mergeFrom）：字距由字体正常处理，入场时整词平稳淡入（不逐字母闪烁），退场时与中文同时模糊离开
   return Object.assign({}, o, {
-    hl: [...(o.hl || []), [en, col]],
-    kmap: (i, k0) => i <= k ? k0 : k + (i - k) * 0.3,               // 入场：英文紧跟中文、作为一组快速跟进
-    kmapOut: (i, k0, n) => i < k ? k0 : k - 1 + (i - k) / (n - k),   // 退场：英文与中文几乎同时离开，不会单独拖在后面
+    hl: [...(o.hl || []), [en, col]], mergeFrom: k + 1, altIn: 'fade', altOut: 'blur',
+    kmap: (i, k0) => i <= k ? k0 : k + 2,             // 入场：中文点亮后，英文随即淡入
+    kmapOut: (i, k0) => i < k ? k0 : k - 1,           // 退场：英文与最后一个汉字同时离开
     charCss: (ch, i) => i < k ? '' : i === k ? 'font-size:0.5em;margin-left:0.55em' : `font-size:0.5em;font-family:${FONT.sans};font-weight:500;letter-spacing:0.14em`,
   });
 }
