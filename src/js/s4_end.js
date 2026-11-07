@@ -128,7 +128,7 @@ chapter('ch3', 3, '雷暴中的你', '估算距离 · 安全常识', 303);
       mk('sub', { text: '就在这三分钟里', at: o + 0.5, out: o + 4.9, x: 960, y: 170, ax: 0.5, ay: 0.5, size: 38, color: C_TXT, tracking: 0.2 });
       T(Object.assign({}, ST.num, { at: o + 0.9, out: o + 4.95, x: 960, y: 262, ax: 0.5, ay: 0.5, size: 92, weight: 700, family: 'sans', glow: [140, 190, 255], glowK: 0.7, count: { from: 0, to: 8000, dur: 3.0, chars: '约道闪电', fmt: v => `约 ${(Math.round(v / 10) * 10).toLocaleString('en-US')} 道闪电` } }));
       mk('note', { text: '卫星观测：全球平均每秒约 40–50 次闪电', at: o + 2.6, out: o + 5.0, x: 960, y: 340, ax: 0.5, ay: 0.5, size: 22 });
-      mk('head', { text: '没有哪两道，走过同一条路', at: o + FB + 1.55, out: o + D.dur - 1.6, x: 960, y: 965, ax: 0.5, ay: 0.5, size: 56, weight: 700, tracking: 0.18, inA: 'focus', stagger: 0.09, order: 'center', outA: 'blur', outDur: 0.9 });
+      mk('head', { text: '这一道熄灭时，下一道已在别处亮起', at: o + FB + 1.55, out: o + D.dur - 1.6, x: 960, y: 965, ax: 0.5, ay: 0.5, size: 56, weight: 700, tracking: 0.18, inA: 'focus', stagger: 0.09, order: 'center', outA: 'blur', outDur: 0.9 });
     },
     draw(ctx, lt, t, S) {
       sky(ctx, [0, 0, 0], [0, 0, 0]);
