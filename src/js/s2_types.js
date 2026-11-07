@@ -51,32 +51,50 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
 
 // ════════ 云地闪：负极性 vs 正极性 ════════
 {
-  const D = TL.cg;
+  const D = TL.cg, CAM = { x: -140, s: 0.8 };   // CAM：正闪时镜头的最终位置（右移 + 拉远到 0.8 倍）
   scene({
     name: 'cg', t0: D.t0, dur: D.dur, fi: D.fi,
     setup(S, sc) {
       const o = sc.t0, R = RNG(SEED * 29);
       S.cl = TEX.get('storm', () => makeCloud(SEED + 81, 1300, 620, stormShape, { puffs: 1500, rMin: 0.015, rMax: 0.09, flat: (u, v) => v < 0.3 ? 0.42 : 0.95, th0: 0.45, dark: [10, 13, 26], top: [58, 70, 102] }));
-      S.ridge = makeRidge(SEED + 82, 945, 40, 3, 3, -160, W + 480); S.G = makeGround(SEED + 82, S.ridge);
+      S.ridge = makeRidge(SEED + 82, 945, 40, 3, 3, -260, W + 560); S.G = makeGround(SEED + 82, S.ridge, { depth: H + 260 });   // 镜头会拉远，地面画得更宽更深
       S.rain = makeRain(SEED + 83, 700, { alpha: 0.2 });
       S.n1 = genBolt(SEED * 29 + 1, { x0: 560, y0: 640, x1: 515, y1: ridgeY(S.ridge, 515) + 2, step: 20, branch: 0.2, gravAng: Math.PI / 2, grav: 0.06, maxDepth: 3, branchLen: [0.12, 0.42] });
       S.f1 = flashOf(S.n1, { t0: 1.0, lead: 0.4, steps: 26, strokes: [0, 0.07, 0.15, 0.26], peaks: [1.7, 1.25, 1.05, 0.85] });
       S.n2 = genBolt(SEED * 29 + 2, { x0: 690, y0: 650, x1: 770, y1: ridgeY(S.ridge, 770) + 2, step: 20, branch: 0.17, gravAng: Math.PI / 2, grav: 0.06, maxDepth: 2 });
       S.f2 = flashOf(S.n2, { t0: 3.25, lead: 0.3, steps: 20, strokes: [0, 0.09, 0.17], peaks: [1.4, 1.0, 0.8] });
-      S.p1 = genBolt(SEED * 29 + 3, { x0: 1660, y0: 150, x1: 2160, y1: ridgeY(S.ridge, 2160) + 2, angle: 0.05, pull: 0.07, step: 26, branch: 0.05, wander: 0.3, maxDepth: 2, gravAng: Math.PI / 2, grav: 0.02 });
+      // 正闪：从云砧末端先横着窜出、再折向远处的地面。镜头届时拉远到 CAM 所示位置；
+      // 在若干候选里挑一条：整条都在画面内（右侧留足边距）、不穿过标题文字、落点在画面右侧但不贴边
+      const scr = (x, y) => [(x - 960) * CAM.s + 960 + CAM.x, (y - 540) * CAM.s + 540];
+      const TX = { x: (1715 - 960 - CAM.x) / CAM.s + 960 };   // 落点目标（画面 x≈1715）
+      const bad = B => { let v = 0; for (const sg of B.segs) { const [ax, ay] = scr(sg.bx, sg.by), m = sg.main;
+          if (ax > (m ? 1830 : 1870)) v += ax - (m ? 1830 : 1870);                                   // 出画 / 贴右边
+          if (ax > 540 && ax < 1560 && ay > 310 && ay < 575) v += 40;                                 // 标题行
+          if (ax > 540 && ax < 1110 && ay > 575 && ay < 770) v += 40;                                 // 说明文字
+          if (m && sg.by > ridgeY(S.ridge, sg.bx) + 6) v += 40;                                       // 主干不能在到达落点前先钻进地面
+          if (m && sg.by < 125) v += 40; }                                                            // 也不能先向上拱出云砧顶
+        const g = B.main[B.main.length - 1], gx = scr(g.x, g.y)[0]; v += Math.max(0, 1640 - gx) * 2 + Math.max(0, gx - 1790) * 2;
+        return v; };
+      let best = null, bv = Infinity;
+      for (let k = 0; k < 60 && bv > 0; k++) {
+        const B = genBolt(SEED * 29 + 3 + k * 101, { x0: 1660, y0: 150, x1: TX.x, y1: ridgeY(S.ridge, TX.x) + 2, angle: 0.05, pull: 0.09, step: 26, branch: 0.05, wander: 0.28, maxDepth: 2, gravAng: Math.PI / 2, grav: 0.02 });
+        const v = bad(B); if (v < bv) { bv = v; best = B; }
+      }
+      S.p1 = best;
       S.fp = flashOf(S.p1, { t0: 6.55, lead: 0.42, stepped: false, strokes: [0], peaks: [2.3], tau: 0.06, cont: { dur: 0.55, lvl: 0.6 }, bI: 0.35 });
       hit(o + S.f1.tc, 0.85, 'strike'); hit(o + S.f2.tc, 0.6, 'strike'); hit(o + S.fp.tc, 1.15, 'strike');
       S.minus = []; S.plus = [];
       for (let k = 0; k < 22; k++) S.minus.push([R.range(380, 760), R.range(430, 560), R() * 9]);
       for (let k = 0; k < 26; k++) S.plus.push([R.range(300, 1750), R.range(95, 165), R() * 9]);
       TERM(o + 1.5, o + 5.2, 110, 760, '负极性云地闪 NEGATIVE CLOUD-TO-GROUND', ['约占九成 · 把负电荷送到地面', '常有多次回击'], { term: { hl: [['负极性', C_CYAN]] } });
-      TERM(o + 7.0, o + 11.85, 560, 360, '正极性云地闪 POSITIVE CLOUD-TO-GROUND', ['约占一成 · 多从高处的云砧发出', '可落在远离雷暴核心的地方', '通常只击一次，却更强、更持久', { text: '更容易引发火灾', color: '#ffb27a' }], { term: { hl: [['正极性', C_GOLD]], enColor: '#ffd9a0' }, gap: 46 });
+      TERM(o + 7.4, o + 11.85, 560, 360, '正极性云地闪 POSITIVE CLOUD-TO-GROUND', ['约占一成 · 多从高处的云砧发出', '可落在远离雷暴核心的地方', '通常只击一次，却更强、更持久', { text: '更容易引发火灾', color: '#ffb27a' }], { term: { hl: [['正极性', C_GOLD]], enColor: '#ffd9a0' }, gap: 46 });
     },
     draw(ctx, lt, t, S) {
-      const px = lerp(80, -360, smoother((lt - 3.9) / 2.8));
+      // 镜头：先对准雷暴核心（负闪），再一边右移一边拉远，让云砧、远处的落点和起火都完整入画
+      const cz = smoother((lt - 3.9) / 2.8), px = lerp(80, CAM.x, cz), cs = lerp(1, CAM.s, cz);
       const L1 = S.f1.light(lt), L2 = S.f2.light(lt), Lp = S.fp.light(lt);
       const sh = pulse(lt, S.fp.tc, 0.2) * 8;
-      camera(ctx, px + (noise1(lt * 30, 1) - 0.5) * sh, (noise1(lt * 30, 2) - 0.5) * sh, 1.0);
+      camera(ctx, px + (noise1(lt * 30, 1) - 0.5) * sh, (noise1(lt * 30, 2) - 0.5) * sh, cs);
       sky(ctx, [6, 8, 18], [18, 22, 38]);
       const Ls = L1 + L2 + Lp;
       if (Ls > 0.02) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rgba([90, 115, 190], clamp(Ls * 0.1)); ctx.fillRect(-W, -H, W * 4, H * 3); ctx.restore(); }
@@ -105,15 +123,15 @@ chapter('ch2', 2, '闪电的类型', '云地 · 云中 · 外观 · 远方 · �
       const gpo = S.p1.main[S.p1.main.length - 1], gp = [gpo.x, gpo.y];
       if (fs > 0) {
         const fa = smooth(fs / 1.2) * (1 - smooth((lt - 12.1) / 0.6));
-        for (let k = 0; k < 14; k++) {
-          const ph = hash1(k, 3), fx = gp[0] + (ph - 0.5) * 90, life = (lt * (1.2 + ph) + ph * 5) % 1;
-          const fy = gp[1] + 4 - life * (30 + 30 * hash1(k, 4)), r = (1 - life) * (5 + 6 * hash1(k, 6));
+        for (let k = 0; k < 18; k++) {
+          const ph = hash1(k, 3), fx = gp[0] + (ph - 0.5) * 115, life = (lt * (1.2 + ph) + ph * 5) % 1;   // 镜头拉远到 0.8 倍：火的尺寸按 1/0.8 放大
+          const fy = gp[1] + 4 - life * (38 + 38 * hash1(k, 4)), r = (1 - life) * (6.2 + 7.5 * hash1(k, 6));
           glowDot(ctx, fx + Math.sin(lt * 7 + k) * 3, fy, r, [255, 150 - life * 80, 40], 0.8 * fa * (1 - life), 1.4);
         }
       }
       GL.flush(ctx);
       const fire = fs > 0 ? smooth(fs / 1.2) * (1 - smooth((lt - 12.1) / 0.6)) : 0;
-      drawGround(ctx, S.G, { flash: Ls * 0.55, lights: [{ x: 515, y: ridgeY(S.ridge, 515) + 6, r: 320, i: (L1 + L2) * 0.4 }, { x: gp[0], y: gp[1] + 6, r: 420, i: Lp * 0.5 }, { x: gp[0], y: gp[1] + 4, r: 170, i: fire * 0.45, c: [255, 140, 60] }] });
+      drawGround(ctx, S.G, { flash: Ls * 0.55, lights: [{ x: 515, y: ridgeY(S.ridge, 515) + 6, r: 320, i: (L1 + L2) * 0.4 }, { x: gp[0], y: gp[1] + 6, r: 420, i: Lp * 0.5 }, { x: gp[0], y: gp[1] + 4, r: 210, i: fire * 0.5, c: [255, 140, 60] }] });
       if (Ls > 0.3) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(200,215,255,${clamp((Ls - 0.3) * 0.1)})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     },
   });
